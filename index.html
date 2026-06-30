@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nippon Era</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=MedievalSharp&family=Press+Start+2P&family=Shippori+Mincho:wght@500;700&family=VT323&family=Pixelify+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="game-shell" aria-label="Interface inicial do jogo">
+      <div class="background-layer is-visible" data-background-layer></div>
+      <div class="background-layer" data-background-layer></div>
+      <div class="particle-field" id="particle-field" aria-hidden="true"></div>
+      <div class="click-particle-field" id="click-particle-field" aria-hidden="true"></div>
+
+      <section class="screen screen--auth is-active" data-screen="auth-home" aria-label="Entrada de Nippon Era">
+        <div class="auth-gate">
+          <div class="title-wrap">
+            <div class="kicker">REGISTRO DE OKAMI</div>
+            <div class="game-logo" role="img" aria-label="Logo do jogo">
+              <img src="assets/ui/LOGO NOVA.png" alt="Nippon Era" />
+            </div>
+            <div class="subtitle">escolha o selo antes de cruzar o portão</div>
+          </div>
+
+          <div class="torii-frame auth-frame" aria-label="Acessos principais">
+            <div class="crossbeam" aria-hidden="true"></div>
+            <div class="menu-actions">
+              <button class="menu-button menu-button--main" type="button" data-open-screen="player-login">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">旅</span>
+                <span>
+                  <span class="label-main">Entrada para Jogadores</span>
+                  <span class="label-sub">inscreva seu nome no registro</span>
+                </span>
+              </button>
+              <button class="menu-button" type="button" data-open-screen="creator-login">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">印</span>
+                <span>
+                  <span class="label-main">Entrada para Criadores</span>
+                  <span class="label-sub">use a chave dos criadores</span>
+                </span>
+              </button>
+              <button class="menu-button" type="button" data-open-screen="create-rpg">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">巻</span>
+                <span>
+                  <span class="label-main">Criar RPG</span>
+                  <span class="label-sub">fundar nova campanha</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <p class="auth-status" id="auth-status">Firebase aguardando configuração.</p>
+
+          <div class="test-bypass-panel">
+            <span class="test-bypass-title">Simulador de Teste (Sem Firebase)</span>
+            <div class="test-bypass-actions">
+              <button class="test-bypass-btn" type="button" id="test-login-player">
+                <span class="btn-icon">旅</span> Jogador de Teste
+              </button>
+              <button class="test-bypass-btn" type="button" id="test-login-creator">
+                <span class="btn-icon">印</span> Criador de Teste
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen--auth" data-screen="player-login" aria-label="Entrada para jogadores">
+        <form class="auth-panel" id="player-auth-form">
+          <div class="panel-topbar auth-topbar">
+            <button class="back-button" type="button" data-open-screen="auth-home">Voltar</button>
+            <h1>Jogadores</h1>
+          </div>
+          <label class="auth-field">
+            <span>Nome do viajante</span>
+            <input type="text" id="player-name" autocomplete="name" placeholder="Nome do jogador" />
+          </label>
+          <label class="auth-field">
+            <span>E-mail ou usuário</span>
+            <input type="email" id="player-email" autocomplete="email" placeholder="jogador@exemplo.com" required />
+          </label>
+          <label class="auth-field">
+            <span>Senha</span>
+            <input type="password" id="player-password" autocomplete="current-password" placeholder="Selo pessoal" required />
+          </label>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit" data-auth-action="player-login">Entrar</button>
+            <button class="auth-submit auth-submit--ghost" type="submit" data-auth-action="player-create">Criar conta</button>
+          </div>
+          <p class="auth-note">Jogadores entram no menu atual enquanto a seleção de RPGs é preparada.</p>
+        </form>
+      </section>
+
+      <section class="screen screen--auth" data-screen="creator-login" aria-label="Entrada para criadores">
+        <form class="auth-panel" id="creator-auth-form">
+          <div class="panel-topbar auth-topbar">
+            <button class="back-button" type="button" data-open-screen="auth-home">Voltar</button>
+            <h1>Criadores</h1>
+          </div>
+          <label class="auth-field">
+            <span>E-mail ou usuário</span>
+            <input type="email" id="creator-email" autocomplete="email" placeholder="criador@exemplo.com" required />
+          </label>
+          <label class="auth-field">
+            <span>Senha</span>
+            <input type="password" id="creator-password" autocomplete="current-password" placeholder="Selo pessoal" required />
+          </label>
+          <label class="auth-field">
+            <span>Chave dos Criadores</span>
+            <input type="password" id="creator-key" autocomplete="off" placeholder="Chave da campanha" required />
+          </label>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Entrar como criador</button>
+          </div>
+          <p class="auth-note">A chave libera acesso ao RPG criado pelo dono da campanha.</p>
+        </form>
+      </section>
+
+      <section class="screen screen--auth" data-screen="create-rpg" aria-label="Criar RPG">
+        <form class="auth-panel auth-panel--wide" id="create-rpg-form">
+          <div class="panel-topbar auth-topbar">
+            <button class="back-button" type="button" data-open-screen="auth-home">Voltar</button>
+            <h1>Criar RPG</h1>
+          </div>
+          <div class="auth-grid">
+            <label class="auth-field">
+              <span>Nome da campanha</span>
+              <input type="text" id="rpg-name" autocomplete="off" placeholder="Ex: Cinzas de Okami" required />
+            </label>
+            <label class="auth-field">
+              <span>Criador principal</span>
+              <input type="text" id="owner-name" autocomplete="name" placeholder="Nome do mestre" required />
+            </label>
+            <label class="auth-field">
+              <span>Email do criador</span>
+              <input type="email" id="owner-email" autocomplete="email" placeholder="mestre@exemplo.com" required />
+            </label>
+            <label class="auth-field">
+              <span>Senha</span>
+              <input type="password" id="owner-password" autocomplete="new-password" placeholder="Selo pessoal" required />
+            </label>
+            <label class="auth-field">
+              <span>Confirmar senha</span>
+              <input type="password" id="owner-password-confirm" autocomplete="new-password" placeholder="Repita o selo" required />
+            </label>
+            <label class="auth-field">
+              <span>Selo de acesso</span>
+              <input type="password" id="rpg-creator-key" autocomplete="off" placeholder="Chave para outros criadores" required />
+            </label>
+          </div>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Fundar novo RPG</button>
+          </div>
+          <p class="auth-note">A chave do RPG não substitui a senha pessoal. Ela serve para autorizar outros criadores.</p>
+        </form>
+      </section>
+
+      <section class="screen screen--menu" data-screen="menu" aria-label="Menu inicial">
+        <div class="menu-moon" aria-hidden="true"></div>
+        <div class="menu-mountains" aria-hidden="true"></div>
+        <div class="menu-stage">
+          <div class="title-wrap">
+            <div class="kicker">ERA TENSHO</div>
+            <div class="game-logo" role="img" aria-label="Logo do jogo">
+              <img src="assets/ui/LOGO NOVA.png" alt="Nippon Era" />
+            </div>
+            <div class="subtitle">terra de pactos, aço e memória</div>
+          </div>
+
+          <div class="torii-frame" aria-label="Ações principais">
+            <div class="crossbeam" aria-hidden="true"></div>
+            <div class="menu-actions">
+              <button class="menu-button menu-button--main" type="button" data-open-screen="shop">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">店</span>
+                <span>
+                  <span class="label-main">Loja</span>
+                  <span class="label-sub">comprar, vender e conversar</span>
+                </span>
+              </button>
+              <button class="menu-button" type="button" data-open-screen="items">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">具</span>
+                <span>
+                  <span class="label-main">Itens</span>
+                  <span class="label-sub">armas, artefatos e tralhas</span>
+                </span>
+              </button>
+              <button class="menu-button" type="button" data-open-screen="mural">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">任</span>
+                <span>
+                  <span class="label-main">Mural</span>
+                  <span class="label-sub">contratos do vilarejo</span>
+                </span>
+              </button>
+              <button class="menu-button" type="button" data-open-screen="lore">
+                <span class="rivet tl"></span><span class="rivet tr"></span>
+                <span class="rivet bl"></span><span class="rivet br"></span>
+                <span class="icon-slot" aria-hidden="true">書</span>
+                <span>
+                  <span class="label-main">Lore</span>
+                  <span class="label-sub">crônicas do reino em cinzas</span>
+                </span>
+              </button>
+
+            </div>
+          </div>
+
+          <div class="footer-strip">
+            <span>CLÃ SEM BRASÃO · MERCADO DE OKAMI</span>
+            <div class="dev-role-switcher" aria-label="Alternar papel de teste">
+              <span>Papel de Teste:</span>
+              <button class="role-switch-btn" id="switch-to-player" type="button" title="Mudar para Jogador">Jogador</button>
+              <button class="role-switch-btn" id="switch-to-creator" type="button" title="Mudar para Criador">Criador</button>
+            </div>
+            <button class="reset-progress-btn" id="reset-progress-btn" type="button" title="Limpar progresso e recomeçar">Recomeçar Jornada</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen--panel screen--shop" data-screen="shop" aria-label="Loja medieval">
+        <div class="panel panel--shop">
+          <div class="panel-topbar">
+            <button class="back-button" type="button" data-open-screen="menu">Voltar</button>
+            <h1>Loja</h1>
+            <div class="topbar-actions-wrap" style="display: flex; align-items: center; gap: 10px; justify-self: end; pointer-events: auto;">
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-shop" type="button" style="margin: 0;" hidden>Criar Armas / Itens</button>
+              <div class="hud-coins" aria-label="Moedas do jogador">
+                <span class="coin-icon" aria-hidden="true">🪙</span>
+                <span id="shop-coins-value">150</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="shop-tools">
+            <label class="search-field">
+              <span>Busca</span>
+              <input
+                type="search"
+                id="shop-search"
+                placeholder="Buscar item..."
+                autocomplete="off"
+              />
+            </label>
+
+            <div class="category-tabs" aria-label="Categorias da loja">
+              <button class="category-button is-active" type="button" data-category="Todos">
+                Todos
+              </button>
+              <button class="category-button" type="button" data-category="Armas">
+                Armas
+              </button>
+              <button class="category-button" type="button" data-category="Artefatos">
+                Artefatos
+              </button>
+              <button class="category-button" type="button" data-category="Armaduras">
+                Armaduras
+              </button>
+              <button class="category-button" type="button" data-category="Comestíveis">
+                Comestíveis
+              </button>
+              <button class="category-button" type="button" data-category="Tralhas">
+                Tralhas
+              </button>
+            </div>
+          </div>
+
+
+
+          <div class="shop-layout">
+            <aside class="shopkeeper" aria-label="Vendedor da loja">
+              <div class="npc-dialog" id="npc-dialog">
+                Escolha bem, viajante. Nem todo brilho vem do ouro.
+              </div>
+              <div class="npc-conversation" id="npc-conversation" hidden></div>
+              <button class="npc-button" type="button" id="npc-button" aria-label="Conversar com o vendedor">
+                <img src="assets/img/NPC1.png" alt="NPC vendedor da loja" class="npc-image" id="npc-image" />
+              </button>
+            </aside>
+
+            <div class="shop-list" id="shop-list" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <aside class="undertale-chat" id="undertale-chat" aria-label="Conversa com Soiren Kisuke">
+          <div class="chat-header">
+            <strong>Soiren Kisuke</strong>
+            <span id="chat-status">humor: cauteloso | preços: estáveis | conversa ativa</span>
+            <button class="chat-icon-button" type="button" id="chat-close-button" aria-label="Fechar conversa">▼</button>
+          </div>
+
+          <div class="chat-layout">
+            <div class="chat-profile">
+              <img src="assets/img/NPC1.png" alt="Soiren Kisuke" class="chat-portrait" id="chat-portrait" />
+              <span>Kisuke-san</span>
+            </div>
+
+            <div class="chat-thread">
+              <div class="chat-log" id="chat-log" aria-live="polite"></div>
+              <div class="chat-history" id="chat-history">Histórico: nenhuma escolha registrada ainda.</div>
+            </div>
+
+            <div class="chat-choice-panel">
+              <span>Escolha uma resposta</span>
+              <div class="chat-options" id="chat-options" aria-label="Opções de diálogo"></div>
+              <div class="chat-quick-actions">
+                <button class="chat-small-button" type="button" id="chat-shop-action">Comprar item</button>
+                <button class="chat-small-button" type="button" id="chat-end-action">Fechar</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="screen screen--panel" data-screen="lore" aria-label="Lore">
+        <div class="panel panel--lore">
+          <div class="panel-topbar">
+            <button class="back-button" type="button" data-open-screen="menu">Voltar</button>
+            <h1>Lore</h1>
+            <div class="topbar-actions-wrap" style="display: flex; align-items: center; gap: 10px; justify-self: end; pointer-events: auto;">
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-lore" type="button" style="margin: 0;" hidden>Criar Lores</button>
+            </div>
+          </div>
+
+
+
+          <article class="scroll-panel">
+            <h2>Crônicas da Era Tensho</h2>
+            <div id="lore-list" class="lore-list" aria-live="polite"></div>
+            
+            <section class="lore-section static-lore">
+              <h3>A Cinza do Reino</h3>
+              <p>
+                Quando as muralhas de Eldrath caíram, os sinos tocaram por sete noites consecutivas. Das cinzas dos antigos castelos feudais, nasceram pactos forjados na escuridão, mercadores errantes e guerreiros sem brasão. Sobreviver tornou-se a única moeda aceita de fato.
+              </p>
+            </section>
+
+            <section class="lore-section static-lore">
+              <h3>O Mercado de Okami</h3>
+              <p>
+                Okami não é uma cidade comercial comum; é uma encruzilhada de desertores, clãs caídos e almas perdidas. Sob a proteção silenciosa de Soiren Kisuke e as leis não escritas dos mercadores ambulantes, Okami permanece como o último reduto onde o ouro ainda compra abrigo, memória e segredos.
+              </p>
+            </section>
+
+            <section class="lore-section static-lore">
+              <h3>O Clã Oda</h3>
+              <p>
+                A dinastia Oda tenta, sob ordens do Xogunato, unificar as terras fragmentadas. Seus generais oferecem bolsas pesadas de moedas para quem realiza seus trabalhos sujos, mas cobram submissão total. Para os Oda, o silêncio de Okami é tolerado apenas enquanto for lucrativo.
+              </p>
+            </section>
+
+            <section class="lore-section static-lore">
+              <h3>O Santuário Sasa</h3>
+              <p>
+                Escondido entre os bambuzais sagrados, o santuário é o refúgio dos rebeldes que juraram nunca dobrar os joelhos perante os Oda ou o Xogunato. Monges de visão espiritual apurada vigiam as fronteiras e guardam relíquias ancestrais que a realidade tenta, a todo custo, apagar da história.
+              </p>
+            </section>
+
+            <section class="lore-section static-lore">
+              <h3>A Lâmina Suibokuga & A Técnica Tenpitsu</h3>
+              <p>
+                Diz-se que a Meito Suibokuga foi forjada com a essência da tinta espiritual e da água pura. Sob o comando de seu portador, ela não apenas corta o ferro, mas borra a própria realidade. Ela é a manifestação física do Tenpitsu, o Pincel Celestial — uma técnica proibida capaz de reescrever o destino de Nippon desenhando novos caminhos nas margens do tempo.
+              </p>
+            </section>
+          </article>
+        </div>
+      </section>
+
+
+
+      <section class="screen screen--panel" data-screen="items" aria-label="Inventário">
+        <div class="panel panel--inventory">
+          <div class="panel-topbar">
+            <button class="back-button" type="button" data-open-screen="menu">Voltar</button>
+            <h1>Itens</h1>
+            <div class="topbar-actions-wrap" style="display: flex; align-items: center; gap: 10px; justify-self: end; pointer-events: auto;">
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-inventories" type="button" style="margin: 0;" hidden>Gerenciar Inventários</button>
+              <div class="hud-coins" aria-label="Moedas do jogador">
+                <span class="coin-icon" aria-hidden="true">🪙</span>
+                <span id="inventory-coins-value">150</span>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div class="inventory-grid" id="inventory-grid" aria-label="Espaços do inventário"></div>
+        </div>
+      </section>
+
+      <section class="screen screen--panel" data-screen="mural" aria-label="Mural de Contratos">
+        <div class="panel panel--mural">
+          <div class="panel-topbar">
+            <button class="back-button" type="button" data-open-screen="menu">Voltar</button>
+            <h1>Mural de Contratos</h1>
+            <div class="topbar-actions-wrap" style="display: flex; align-items: center; gap: 10px; justify-self: end; pointer-events: auto;">
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-logs" type="button" style="margin: 0;" hidden>Gerenciar Logs</button>
+              <div class="hud-coins" aria-label="Moedas do jogador">
+                <span class="coin-icon" aria-hidden="true">🪙</span>
+                <span id="mural-coins-value">150</span>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div class="mural-layout">
+            <div class="mural-scroll scroll-panel">
+              <p class="mural-intro">Selecione e conclua contratos do vilarejo para obter moedas. Soiren Kisuke sempre observa os efeitos de suas ações no Mercado de Okami.</p>
+              <div class="mural-list" id="mural-list" aria-label="Lista de contratos">
+                <!-- Missões serão renderizadas dinamicamente aqui -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Painéis Inline de Criação/Gerenciamento (Mestre) -->
+      <div class="creator-only inline-creator-panel" id="inline-creator-shop" hidden>
+        <div class="inline-creator-header">
+          <h2>Oficina de Criar Itens (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-shop-btn">Fechar</button>
+        </div>
+        
+        <form class="creator-form" id="creator-item-form">
+          <input type="hidden" id="creator-item-id" />
+          <div class="creator-form-grid">
+            <label class="auth-field">
+              <span>Nome do item</span>
+              <input type="text" id="item-name" required />
+            </label>
+            <label class="auth-field">
+              <span>Categoria</span>
+              <select id="item-category">
+                <option>Armas</option>
+                <option>Artefatos</option>
+                <option>Armaduras</option>
+                <option>Comestíveis</option>
+                <option>Tralhas</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Raridade</span>
+              <select id="item-rarity">
+                <option>Comum</option>
+                <option>Incomum</option>
+                <option>Rara</option>
+                <option>Épica</option>
+                <option>Lendária</option>
+                <option>Misteriosa</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Preço</span>
+              <input type="number" id="item-price" min="1" value="1" required />
+            </label>
+            <label class="auth-field">
+              <span>Dano</span>
+              <input type="text" id="item-damage" />
+            </label>
+            <label class="auth-field">
+              <span>Defesa</span>
+              <input type="text" id="item-defense" />
+            </label>
+            <label class="auth-field">
+              <span>Cura</span>
+              <input type="text" id="item-healing" />
+            </label>
+            <label class="auth-field">
+              <span>Dureza</span>
+              <input type="text" id="item-durability" />
+            </label>
+            <label class="auth-field">
+              <span>Extra</span>
+              <input type="text" id="item-extra" />
+            </label>
+            <label class="auth-field">
+              <span>Estoque</span>
+              <input type="number" id="item-stock" min="-1" value="-1" />
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>Imagem URL</span>
+              <input type="url" id="item-image-url" placeholder="Opcional" />
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>Descrição</span>
+              <textarea id="item-description" rows="2" required></textarea>
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>História</span>
+              <textarea id="item-story" rows="3"></textarea>
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>Fala do NPC</span>
+              <textarea id="item-npc-line" rows="2"></textarea>
+            </label>
+            <label class="creator-check">
+              <input type="checkbox" id="item-active" checked />
+              <span>Item ativo na loja</span>
+            </label>
+          </div>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Salvar item</button>
+            <button class="auth-submit auth-submit--ghost" type="button" id="item-form-clear">Limpar</button>
+          </div>
+        </form>
+        <div class="creator-list" id="creator-items-list" aria-live="polite"></div>
+      </div>
+
+      <div class="creator-only inline-creator-panel" id="inline-creator-lore" hidden>
+        <div class="inline-creator-header">
+          <h2>Oficina de Lore (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-lore-btn">Fechar</button>
+        </div>
+        
+        <form class="creator-form" id="creator-lore-form">
+          <input type="hidden" id="lore-id" />
+          <div class="creator-form-grid">
+            <label class="auth-field">
+              <span>Título</span>
+              <input type="text" id="lore-title" required />
+            </label>
+            <label class="auth-field">
+              <span>Categoria</span>
+              <select id="lore-category">
+                <option>Reino</option>
+                <option>Clãs</option>
+                <option>Artefatos</option>
+                <option>Personagens</option>
+                <option>Lugares</option>
+                <option>Missões</option>
+                <option>Segredos</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Status</span>
+              <select id="lore-status">
+                <option value="draft">Rascunho</option>
+                <option value="published">Publicado</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Ordem</span>
+              <input type="number" id="lore-order" value="1" />
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>Conteúdo</span>
+              <textarea id="lore-content" rows="7" required></textarea>
+            </label>
+          </div>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Salvar lore</button>
+            <button class="auth-submit auth-submit--ghost" type="button" id="lore-form-clear">Limpar</button>
+          </div>
+        </form>
+        <div class="creator-list" id="creator-lore-list" aria-live="polite"></div>
+      </div>
+
+      <div class="creator-only inline-creator-panel" id="inline-creator-inventories" hidden>
+        <div class="inline-creator-header">
+          <h2>Inventários dos Jogadores (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-inventories-btn">Fechar</button>
+        </div>
+        <div class="creator-toolbar">
+          <label class="auth-field" style="flex: 1;">
+            <span>Buscar jogador ou item</span>
+            <input type="search" id="inventory-search" placeholder="Nome, email, item..." />
+          </label>
+          <button class="auth-submit" type="button" id="refresh-inventories">Atualizar</button>
+        </div>
+        <div class="creator-list" id="creator-inventory-list" aria-live="polite"></div>
+      </div>
+
+      <div class="creator-only inline-creator-panel" id="inline-creator-logs" hidden>
+        <div class="inline-creator-header">
+          <h2>Histórico & Logs da Campanha (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-logs-btn">Fechar</button>
+        </div>
+        <div class="creator-toolbar">
+          <button class="auth-submit" type="button" id="refresh-logs">Atualizar logs</button>
+        </div>
+        <div class="creator-list creator-log-list" id="creator-log-list" aria-live="polite"></div>
+      </div>
+
+      <!-- Backdrop para ferramentas de criação (Mestre) -->
+      <div class="creator-backdrop" id="creator-backdrop" hidden></div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="data/items.js"></script>
+    <script src="data/dialogs.js"></script>
+    <script src="data/mural.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
