@@ -246,7 +246,21 @@
                 <span class="coin-icon" aria-hidden="true">🪙</span>
                 <span id="shop-coins-value">150</span>
               </div>
+              <div class="hud-magic-coins" aria-label="Essências do jogador">
+                <span class="magic-coin-icon" aria-hidden="true">🔮</span>
+                <span id="shop-magic-coins-value">50</span>
+              </div>
             </div>
+          </div>
+
+          <!-- Alternador de Loja -->
+          <div class="shop-switcher-row">
+            <button class="shop-switch-btn is-active" type="button" id="shop-switch-normal" data-shop-type="normal">
+              ⚔️ Mercado de Okami
+            </button>
+            <button class="shop-switch-btn" type="button" id="shop-switch-magic" data-shop-type="magic">
+              🔮 Santuário das Brumas
+            </button>
           </div>
 
           <div class="shop-tools">
@@ -343,6 +357,14 @@
 
           <article class="scroll-panel">
             <h2>Crônicas da Era Tensho</h2>
+            <div class="category-filters" id="lore-category-filters" style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: auto;">
+              <button class="category-button is-active" type="button" data-lore-category="Todos">Todos</button>
+              <button class="category-button" type="button" data-lore-category="Reino">Reino</button>
+              <button class="category-button" type="button" data-lore-category="Clãs">Clãs</button>
+              <button class="category-button" type="button" data-lore-category="Artefatos">Artefatos</button>
+              <button class="category-button" type="button" data-lore-category="Personagens">Personagens</button>
+              <button class="category-button" type="button" data-lore-category="Outros">Outros</button>
+            </div>
             <div id="lore-list" class="lore-list" aria-live="polite"></div>
             
             <section class="lore-section static-lore">
@@ -396,6 +418,10 @@
                 <span class="coin-icon" aria-hidden="true">🪙</span>
                 <span id="inventory-coins-value">150</span>
               </div>
+              <div class="hud-magic-coins" aria-label="Essências do jogador">
+                <span class="magic-coin-icon" aria-hidden="true">🔮</span>
+                <span id="inventory-magic-coins-value">50</span>
+              </div>
             </div>
           </div>
 
@@ -408,24 +434,52 @@
       <section class="screen screen--panel" data-screen="mural" aria-label="Mural de Contratos">
         <div class="panel panel--mural">
           <div class="panel-topbar">
-            <button class="back-button" type="button" data-open-screen="menu">Voltar</button>
+            <div style="display: flex; gap: 8px; pointer-events: auto;">
+              <button class="back-button" type="button" data-open-screen="menu" style="width: auto; min-width: 90px; margin: 0;">Voltar</button>
+              <button class="back-button" type="button" id="open-dossiers-btn" style="width: auto; min-width: 90px; margin: 0;" title="Ver Dossiês de Personagens">👥 Dossiês</button>
+            </div>
             <h1>Mural de Contratos</h1>
             <div class="topbar-actions-wrap" style="display: flex; align-items: center; gap: 10px; justify-self: end; pointer-events: auto;">
-              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-logs" type="button" style="margin: 0;" hidden>Gerenciar Logs</button>
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-mural" type="button" style="margin: 0;" hidden>Gerenciar Mural</button>
+              <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-logs" type="button" style="margin: 0;" hidden>Logs</button>
               <div class="hud-coins" aria-label="Moedas do jogador">
                 <span class="coin-icon" aria-hidden="true">🪙</span>
                 <span id="mural-coins-value">150</span>
               </div>
+              <div class="hud-magic-coins" aria-label="Essências do jogador">
+                <span class="magic-coin-icon" aria-hidden="true">🔮</span>
+                <span id="mural-magic-coins-value">50</span>
+              </div>
             </div>
           </div>
 
-
-
           <div class="mural-layout">
-            <div class="mural-scroll scroll-panel">
+            <!-- Tela de Contratos (Original) -->
+            <div class="mural-scroll scroll-panel" id="mural-contracts-view">
               <p class="mural-intro">Selecione e conclua contratos do vilarejo para obter moedas. Soiren Kisuke sempre observa os efeitos de suas ações no Mercado de Okami.</p>
               <div class="mural-list" id="mural-list" aria-label="Lista de contratos">
                 <!-- Missões serão renderizadas dinamicamente aqui -->
+              </div>
+            </div>
+
+            <!-- Tela de Dossiês de Personagens (Novo) -->
+            <div class="mural-scroll scroll-panel" id="mural-dossiers-view" style="display: none;">
+              <div class="dossiers-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-family: 'Press Start 2P', monospace; font-size: 0.8rem; color: var(--gold); margin: 0;">Dossiês de Personagens</h2>
+                <div style="display: flex; gap: 8px; pointer-events: auto;">
+                  <button class="creator-only auth-submit inline-creator-btn" id="toggle-creator-dossiers" type="button" style="margin: 0;" hidden>Oficina de Dossiês</button>
+                  <button class="mural-btn" id="back-to-contracts-btn" type="button" style="padding: 4px 12px; font-size: 0.8rem;">Ver Contratos</button>
+                </div>
+              </div>
+              <p class="mural-intro">Arquivos confidenciais do vilarejo e arredores de Okami. Contém segredos e registros de figuras-chave.</p>
+              
+              <div class="dossiers-grid" id="dossiers-list" aria-live="polite">
+                <!-- Fichas de personagem renderizadas aqui -->
+              </div>
+              
+              <!-- Detalhes do Dossiê Selecionado (Overlay/Cartão Detalhado) -->
+              <div id="dossier-detail-card" class="dossier-detail-card" style="display: none;">
+                <!-- Dossiê completo será renderizado aqui -->
               </div>
             </div>
           </div>
@@ -470,6 +524,13 @@
             <label class="auth-field">
               <span>Preço</span>
               <input type="number" id="item-price" min="1" value="1" required />
+            </label>
+            <label class="auth-field">
+              <span>Estabelecimento</span>
+              <select id="item-shop-type">
+                <option value="normal">Mercado de Okami (Ouro)</option>
+                <option value="magic">Santuário das Brumas (Essência)</option>
+              </select>
             </label>
             <label class="auth-field">
               <span>Dano</span>
@@ -573,6 +634,166 @@
         <div class="creator-list" id="creator-lore-list" aria-live="polite"></div>
       </div>
 
+      <div class="creator-only inline-creator-panel" id="inline-creator-mural" hidden>
+        <div class="inline-creator-header">
+          <h2>Oficina do Mural (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-mural-btn">Fechar</button>
+        </div>
+        
+        <form class="creator-form" id="creator-mural-form">
+          <input type="hidden" id="mission-id" />
+          <div class="creator-form-grid">
+            <label class="auth-field">
+              <span>Título do Contrato</span>
+              <input type="text" id="mission-title" required />
+            </label>
+            <label class="auth-field">
+              <span>Dificuldade</span>
+              <select id="mission-difficulty">
+                <option value="Fácil">Fácil</option>
+                <option value="Moderada">Moderada</option>
+                <option value="Perigosa">Perigosa</option>
+                <option value="Mortal">Mortal</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Tempo Estimado</span>
+              <input type="text" id="mission-time" placeholder="Ex: Meio dia de marcha" required />
+            </label>
+            <label class="auth-field">
+              <span>Recompensa (Ouro)</span>
+              <input type="number" id="mission-reward" value="100" min="1" required />
+            </label>
+            <label class="auth-field">
+              <span>Ajuste de Preços (Reputação)</span>
+              <select id="mission-reputation">
+                <option value="-0.01">-1% (Ajuste leve)</option>
+                <option value="-0.02">-2% (Ajuste moderado)</option>
+                <option value="-0.03">-3% (Ajuste forte)</option>
+                <option value="-0.04">-4% (Ajuste supremo)</option>
+                <option value="0">0% (Sem ajuste)</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Tipo de Requisito</span>
+              <select id="mission-req-type">
+                <option value="none">Nenhum</option>
+                <option value="category">Por Categoria de Item</option>
+                <option value="item">Por Item Específico</option>
+              </select>
+            </label>
+            <label class="auth-field">
+              <span>Valor do Requisito (ID do Item ou Nome da Categoria)</span>
+              <input type="text" id="mission-req-value" placeholder="Ex: Armas ou pao-campanha" />
+            </label>
+            <label class="auth-field">
+              <span>Texto Auxiliar de Requisito</span>
+              <input type="text" id="mission-req-text" placeholder="Ex: Exige 1 Pão (será consumido)" />
+            </label>
+            <label class="creator-check creator-span-2">
+              <input type="checkbox" id="mission-consume" checked />
+              <span>Consumir item ao concluir a missão</span>
+            </label>
+            <label class="auth-field creator-span-2">
+              <span>Texto Narrativo (Aviso do Mural)</span>
+              <textarea id="mission-desc" rows="4" placeholder="Deixe em branco para gerar narrativa automática baseada nos dados."></textarea>
+            </label>
+          </div>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Salvar contrato</button>
+            <button class="auth-submit auth-submit--ghost" type="button" id="mural-form-clear">Limpar</button>
+          </div>
+        </form>
+        <div class="creator-list" id="creator-mural-list" aria-live="polite"></div>
+      </div>
+
+      <div class="creator-only inline-creator-panel" id="inline-creator-dossiers" hidden>
+        <div class="inline-creator-header">
+          <h2>Oficina de Dossiês (Mestre)</h2>
+          <button class="chat-small-button" type="button" id="close-creator-dossiers-btn">Fechar</button>
+        </div>
+        
+        <form class="creator-form" id="creator-dossiers-form">
+          <input type="hidden" id="dossier-id" />
+          <div class="creator-form-grid">
+            <!-- Campos Essenciais (Sempre Visíveis) -->
+            <label class="auth-field">
+              <span>Nome do Personagem</span>
+              <input type="text" id="dossier-name" required />
+            </label>
+            <label class="auth-field">
+              <span>Status de Aprovação</span>
+              <select id="dossier-approval">
+                <option value="aprovada">Aprovada (Visível para todos)</option>
+                <option value="pendente">Pendente (Rascunho)</option>
+                <option value="oculta">Oculta (Apenas Mestre)</option>
+              </select>
+            </label>
+
+            <!-- Seção de Upload do Retrato (Principal + URL de Fallback) -->
+            <div class="auth-field creator-span-2 dossier-avatar-field-wrap">
+              <span>Retrato / Avatar</span>
+              <div class="avatar-upload-container">
+                <div class="avatar-preview-box" id="dossier-avatar-preview-wrap">
+                  <img src="assets/img/NPC1.png" id="dossier-avatar-preview" alt="Preview do Avatar" />
+                </div>
+                <div class="avatar-upload-inputs">
+                  <label class="avatar-file-label">
+                    <span>Selecionar Imagem</span>
+                    <input type="file" id="dossier-avatar-file" accept="image/*" style="display: none;" />
+                  </label>
+                  <div class="avatar-url-input-wrap">
+                    <span>Ou cole a URL da imagem:</span>
+                    <input type="text" id="dossier-avatar" value="assets/img/NPC1.png" placeholder="Ex: assets/img/NPC1.png" required />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <label class="auth-field creator-span-2">
+              <span>Biografia / Dossiê Narrativo</span>
+              <textarea id="dossier-biography" rows="4" placeholder="Escreva a crônica ou biografia in-world..." required></textarea>
+            </label>
+
+            <!-- Seção Retrátil de Informações Avançadas (Campos Secundários) -->
+            <details class="creator-span-2 advanced-details-section">
+              <summary>Informações Avançadas</summary>
+              <div class="advanced-details-grid">
+                <label class="auth-field">
+                  <span>Título / Cargo</span>
+                  <input type="text" id="dossier-title" placeholder="Ex: General da Guarda" />
+                </label>
+                <label class="auth-field">
+                  <span>Clã / Facção</span>
+                  <input type="text" id="dossier-faction" placeholder="Ex: Clã Oda" />
+                </label>
+                <label class="auth-field">
+                  <span>Status do Alvo</span>
+                  <input type="text" id="dossier-status" placeholder="Ex: Ativo / Desaparecido" />
+                </label>
+                <label class="auth-field">
+                  <span>Traços de Personalidade</span>
+                  <input type="text" id="dossier-traits" placeholder="Ex: Frio, Calculista" />
+                </label>
+                <label class="auth-field">
+                  <span>Relação com o Jogador</span>
+                  <input type="text" id="dossier-relationship" placeholder="Ex: Neutro / Hostil / Amigável" />
+                </label>
+                <label class="auth-field creator-span-2">
+                  <span>Segredos do Personagem (Mestre)</span>
+                  <input type="text" id="dossier-secrets" placeholder="Revelações ou mistérios que o jogador desconhece" />
+                </label>
+              </div>
+            </details>
+          </div>
+          <div class="auth-actions">
+            <button class="auth-submit" type="submit">Salvar dossiê</button>
+            <button class="auth-submit auth-submit--ghost" type="button" id="dossiers-form-clear">Limpar</button>
+          </div>
+        </form>
+        <div class="creator-list" id="creator-dossiers-list" aria-live="polite"></div>
+      </div>
+
       <div class="creator-only inline-creator-panel" id="inline-creator-inventories" hidden>
         <div class="inline-creator-header">
           <h2>Inventários dos Jogadores (Mestre)</h2>
@@ -608,8 +829,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
     <script src="firebase-config.js"></script>
     <script src="data/items.js"></script>
+    <script src="data/items-magic.js"></script>
     <script src="data/dialogs.js"></script>
     <script src="data/mural.js"></script>
+    <script src="data/lore.js"></script>
+    <script src="data/characters.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

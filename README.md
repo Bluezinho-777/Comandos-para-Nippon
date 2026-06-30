@@ -1,41 +1,62 @@
-# Nippon Era / Era Tensho (Comandos-para-Nippon)
+# 🌸 Nippon Era & Era Tensho — RPG de Loja Narrativa
 
-Este projeto é um protótipo jogável e interativo de uma interface web para RPG/jogo de fantasia medieval com temática japonesa sombria (Era Tensho). O foco principal é a interação narrativa e de comércio em um ponto de passagem perigoso no **Mercado de Okami**.
+Este projeto é uma experiência interativa web de **RPG de Loja Narrativa**, ambientada em uma atmosfera feudal japonesa sombria, fantasia medieval com toques de pixel art e mistérios espirituais (Era Tensho). 
 
----
-
-## 🛠️ Tecnologia Utilizada
-
-- **HTML5**: Estrutura semântica e acessível (com marcações `aria`).
-- **Vanilla CSS**: Estilo visual denso, inspirado em jogos retrô de fantasia sombria, pixel art e tons de cinzas, madeira envelhecida, ouro e sangue.
-- **Vanilla JavaScript**: Lógica estruturada para navegação de telas, compra e venda de itens, chat interativo de escolhas (estilo RPG/Undertale), emissão de partículas e persistência local de dados.
-- **Firebase**: Estruturação base para autenticação de jogadores, criadores e criação de campanhas de RPG (requer configuração em `firebase-config.js`).
+O coração do jogo está no **Mercado de Okami**, onde o jogador interage com o vendedor sarcástico e misterioso **Soiren Kisuke (Kisuke-san)**, gerencia suas moedas, compra e vende itens, realiza contratos no mural e investiga relíquias espirituais proibidas.
 
 ---
 
-## 📂 Organização do Projeto
+## 🛠️ Tecnologias Utilizadas
 
-Os arquivos JavaScript foram separados para melhor organização de código e manutenção futura:
-
-- **`index.html`**: Contém a marcação de todas as telas (Menu Inicial, Loja, Inventário, Mural de Contratos e Lore).
-- **`style.css`**: Define a direção visual completa, animações, adaptabilidade mobile e cursor customizado.
-- **`data/items.js`**: Banco de dados estático e dinâmico dos itens da loja (Armas, Artefatos, Armaduras, Comestíveis e Tralhas).
-- **`data/dialogs.js`**: Árvore completa de diálogos de Soiren Kisuke e as respostas narrativas do jogador.
-- **`data/mural.js`**: Definições das missões e contratos dinâmicos que o jogador pode realizar.
-- **`script.js`**: Lógica central da aplicação, renderização de listas, gerenciamento de moedas, cursor customizado e persistência com `localStorage`.
-- **`assets/`**: Assets gráficos do jogo.
-  - `assets/cursor_hammer.png`: Cursor customizado em forma de martelo (ativo em computadores).
-  - `assets/ui/`: Logos, texturas e imagens de interface.
-  - `assets/img/`: NPC retratos (Soiren Kisuke em diferentes humores) e fundos rotativos do Mercado de Okami.
+- **HTML5**: Estrutura semântica e tags `aria` para garantir acessibilidade e suporte de leitura.
+- **Vanilla CSS**: Estilos visuais profundos, layouts responsivos, paleta sombria baseada em carvão, vermelho sangue, bege envelhecido e ouro, com animações e tipografia retrô.
+- **Vanilla JavaScript**: Lógica do jogo dividida em módulos de dados, controlando diálogos, inventário, cálculo de preços dinâmicos, missões e animações visuais.
+- **Firebase (Compat)**: Integração para autenticação de jogadores, criação de campanhas de RPG e logs de auditoria na nuvem (configurável via `firebase-config.js`).
+- **LocalStorage Fallback**: Um sistema que salva o progresso localmente caso o Firebase não esteja configurado ou esteja offline, permitindo o funcionamento completo da loja e das lores.
 
 ---
 
-## 🎮 Funcionalidades e Mecânicas Jogáveis
+## 📂 Estrutura de Arquivos e Dados
 
-1. **Sistema de Moedas (Currency)**: O jogador começa com **150 moedas** para gastar. O saldo é atualizado dinamicamente em um HUD em tempo real no cabeçalho das telas.
-2. **Loja Dinâmica**: É possível comprar itens da prateleira de Soiren Kisuke. O preço de cada item reage diretamente às suas interações no diálogo narrativo (escolhas provocativas aumentam preços, respostas sensatas garantem descontos).
-3. **Inventário Interativo**: Comporta até **12 itens**. Permite visualizar estatísticas detalhadas de cada item, sua lore individual, descartá-los ("Tirar") ou vendê-los de volta à loja por **70% do valor atual** ajustado.
-4. **Mural de Contratos (Missões)**: Permite aceitar contratos locais do vilarejo de Okami. Cada contrato exige requisitos específicos de itens no inventário para conclusão. Concluir missões dá recompensas generosas de moedas, consome os itens exigidos (se for ração ou tralha) e concede reputação que diminui sutilmente os preços na loja.
-5. **Persistência de Jogo**: O progresso (moedas, inventário, modificador de preços e missões aceitas ou concluídas) é salvo automaticamente no `localStorage` do navegador. É possível reiniciar o progresso e recomeçar a jornada clicando em "Recomeçar Jornada" no menu principal.
-6. **Cursor de Martelo Adaptativo**: Cursor interativo que simula impactos de martelo ao clicar, ativo apenas em dispositivos que possuem mouse (`pointer: fine`), mantendo o comportamento de toque nativo e acessível em dispositivos móveis.
-7. **Revisão Ortográfica**: Todos os textos, diálogos, itens e notificações foram revisados para português brasileiro com acentuação e gramática perfeitas.
+O projeto separa dados estáticos de comportamentos e lógica para facilitar a manutenção e o crescimento:
+
+- **`index.html`**: Contém a marcação e estrutura de todas as telas (Menu, Loja, Inventário, Mural de Contratos, Enciclopédia de Lore e Painéis do Criador).
+- **`style.css`**: Centraliza a identidade visual, animações de brasas, efeitos de cursor e responsividade mobile.
+- **`data/items.js`**: Cadastro dos itens disponíveis para compra e venda (divididos em Armas, Artefatos, Armaduras, Comestíveis e Tralhas), com histórias individuais e falas do NPC.
+- **`data/dialogs.js`**: Árvore estruturada de diálogos com nós (`main`, `identity`, `artifacts`, `secrets`, etc.), opções de escolha do jogador, impacto em preço e respostas randômicas do NPC.
+- **`data/mural.js`**: Lista de contratos disponíveis no Mural, contendo os requisitos de inventário, recompensas de ouro e regras de consumo de itens.
+- **`data/lore.js`**: Crônicas iniciais do Reino da Era Tensho, que alimentam a enciclopédia de forma editável e excluível.
+- **`script.js`**: Motor principal do jogo. Controla a renderização das telas, transição entre menus, processamento de transações, partículas de clique, cursor de martelo e sincronização (Local vs Firebase).
+
+---
+
+## 🎮 Mecânicas e Sistemas do Jogo
+
+### 1. Sistema de Moedas e Economia Dinâmica
+- O jogador inicia com **150 moedas** no seu HUD (atualizado em tempo real nas telas).
+- **Preços Reativos**: As respostas que você escolhe ao conversar com Kisuke-san afetam diretamente seu humor e a tabela de preços! Respostas prudentes ou discretas reduzem os preços (até `-25%`), enquanto perguntas abusivas, ambição ou ameaças os sobem (até `+30%`).
+- O cabeçalho do chat atualiza o humor do NPC em tempo real (`humor: satisfeito | amigável | cauteloso | irritado | hostil`).
+
+### 2. Inventário Interativo
+- Suporta até **12 itens**. Permite inspecionar cada item para ler seus atributos de RPG (dano, defesa, cura, dureza, efeitos extras) e sua lore secreta.
+- **Opções de Descarte e Reembolso**: É possível "Tirar" (descartar permanentemente) ou "Vender" um item. A venda devolve **70% do preço reajustado atual** do item à carteira do jogador.
+
+### 3. Mural de Contratos (Missões)
+- O mural lista contratos locais que o jogador pode aceitar e concluir se preencher as condições do seu inventário.
+- **Resolução de Missões**: Ao concluir um contrato, os itens exigidos (como pão, corda ou artefatos) são consumidos, o jogador recebe moedas de recompensa e ganha reputação que reajusta a tabela da loja.
+
+### 4. Enciclopédia de Lore com Abas (Categorias)
+- A tela de Lore possui abas de categorias inspiradas na UI de categorias da loja: **Todos**, **Reino**, **Clãs**, **Artefatos**, **Personagens** e **Outros**.
+- Permite filtrar as histórias rapidamente. Se o jogador estiver logado como **Criador/Mestre**, a Oficina de Lore permite criar novas histórias, editar as existentes ou apagá-las.
+
+### 5. Modo de Testes / Criação (Mestre)
+- Há um seletor de papel de teste no menu principal (**Jogador / Criador**).
+- Entrar como **Criador** ativa as ferramentas avançadas no rodapé da loja, no inventário dos jogadores e na oficina de lores, permitindo criar itens customizados, gerenciar estoques, auditar logs e alterar lores salvando localmente ou no Firebase.
+
+---
+
+## ✨ Efeitos Visuais e Imersão
+- **Partículas de Brasa**: Efeito visual de fogo/cinzas flutuando no menu e nas telas para passar a atmosfera de um mercado nas ruínas de Eldrath.
+- **Faíscas ao Clicar**: Partículas dinâmicas e sonoras de faísca surgem a cada clique do jogador.
+- **Fundos Rotativos**: O cenário do Mercado de Okami alterna sutilmente a cada 8 segundos entre cinco ilustrações atmosféricas.
+- **Cursor de Impacto**: Um martelo de ferreiro pixelizado que gira e golpeia as janelas simulando peso físico a cada clique (desativado automaticamente em telas touch para não atrapalhar a usabilidade mobile).

@@ -463,39 +463,211 @@ const dialogTree = {
         ]
       }
     ]
-  },
-  secret_books: {
-    npcQuestion: "Se abrisse meus cadernos e visse seu nome, você faria o que?",
+  }
+};
+
+// --- DIÁLOGOS DA LOJA MÁGICA (NPC EREMITA GENZO) ---
+
+const defaultMagicNpcLines = [
+  "A bruma sussurra segredos antigos. O que você procura no santuário?",
+  "Tenho essências, pergaminhos e mistérios que desafiam o Xogunato.",
+  "Estrelas caídas e pó de sonhos. Tudo tem um preço na névoa.",
+  "As runas nas paredes nos observam. Compre algo antes que elas se cansem."
+];
+
+const idleMagicNpcLines = [
+  "O fluxo astral está agitado hoje... ou é só você me encarando?",
+  "A paciência do eremita é longa, mas as poções não se vendem sozinhas.",
+  "Se veio para meditar, a floresta é logo ali. Se veio comprar, sinta-se em casa.",
+  "Você está parado como uma estátua rúnica. Falta-lhe energia?"
+];
+
+const magicNpcHoverLines = [
+  "Aproxime-se. As estrelas revelam boas escolhas para você.",
+  "Não tema o poder do vazio. Tema apenas o saldo da sua essência.",
+  "Procura poder ou proteção? Eu tenho ambos, pelo preço certo.",
+  "A bruma se dissipa para revelar o que o seu destino necessita."
+];
+
+const magicDialogIntroLines = [
+  "Saudações, viajante das brumas. Procura essências divinas, runas antigas ou uma revelação astral?",
+  "O vento me disse que você viria. Ou talvez tenham sido os espíritos. Tanto faz, as mercadorias são reais.",
+  "Genzo, o eremita rúnico, a seu dispor. Moedas de ouro não têm poder por aqui, apenas essências."
+];
+
+const dialogTreeMagic = {
+  main: {
+    npcQuestion: "O que deseja indagar a Genzo-sama nesta noite?",
     options: [
       {
-        label: "Arrancaria a página.",
-        next: "main",
-        priceEffect: 0.06,
+        label: "Quem é você?",
+        next: "identity",
+        priceEffect: -0.02,
         answers: [
-          "Violento. Ineficaz. As páginas lembram.",
-          "Arrancar destino só espalha farelo de problema.",
-          "Preços sobem para cobrir dano literário imaginário."
+          "Sou Genzo, o Monge das Brumas. Alguns me chamam de guardião das runas, outros apenas de louco.",
+          "Um viajante do plano espiritual que resolveu ancorar as cinzas neste templo abandonado.",
+          "Apenas um eremita com dores nas articulações e muito conhecimento sobre o Vazio."
         ]
       },
       {
-        label: "Leria até o fim.",
+        label: "Fale sobre a Névoa",
+        next: "secrets",
+        priceEffect: 0.03,
+        answers: [
+          "A névoa não é inimiga. Ela apenas esconde o que a mente não está pronta para aceitar.",
+          "Há um véu entre nosso mundo e o plano dos Yokai. Eu sou a costura desse véu.",
+          "Quer ver através da bruma? Compre um amuleto. Ver de graça custa o juízo."
+        ]
+      },
+      {
+        label: "Encantamentos?",
+        next: "artifacts",
+        priceEffect: 0.01,
+        answers: [
+          "O fluxo de essência responde bem aos que buscam com respeito. Escolha com sabedoria.",
+          "Cada runa carrega o eco de uma constelação. O preço é pago com a energia da sua alma.",
+          "O vazio tem olhos e ouvidos. Mas estas prateleiras têm soluções."
+        ]
+      },
+      {
+        label: "Partir",
+        close: true,
+        priceEffect: 0,
+        answers: [
+          "Que a luz das runas guie seus passos na escuridão.",
+          "Cuidado com os Yokai no caminho de volta. Eles farejam essência fresca.",
+          "Até que as estrelas se alinhem novamente."
+        ]
+      }
+    ]
+  },
+  identity: {
+    npcQuestion: "Deseja mesmo conhecer os segredos do eremita?",
+    options: [
+      {
+        label: "Conversa com espíritos?",
+        next: "identity_spirits",
+        priceEffect: 0.04,
+        answers: [
+          "Eles falam bastante. A maioria só reclama do frio e de como a eternidade é monótona.",
+          "Eles não usam palavras. Eles usam arrepios na espinha. E hoje eles estão sussurrando sobre você.",
+          "Os Yokai são apenas vizinhos barulhentos. Se você não os incomodar, eles apenas te observam."
+        ]
+      },
+      {
+        label: "Como veio parar aqui?",
+        next: "identity_history",
+        priceEffect: -0.03,
+        answers: [
+          "Segui uma fênix de fogo azul há vinte invernos. A ave sumiu, as brumas ficaram, e eu montei acampamento.",
+          "O templo me escolheu. Quando os antigos monges fugiram da guerra, alguém precisava manter as chamas rúnicas acesas."
+        ]
+      },
+      {
+        label: "Voltar",
+        next: "main",
+        priceEffect: 0,
+        answers: ["Voltemos ao que realmente importa."]
+      }
+    ]
+  },
+  identity_spirits: {
+    npcQuestion: "Eles estão nos observando agora. Isso te assusta?",
+    options: [
+      {
+        label: "Sim, um pouco.",
+        next: "main",
+        priceEffect: -0.02,
+        answers: [
+          "O medo é natural. Ele mantém o sangue correndo. Apenas não demonstre hesitação.",
+          "Um amuleto de olho de gato resolverá seu desconforto. Está na minha prateleira."
+        ]
+      },
+      {
+        label: "Não temo o invisível.",
+        next: "main",
+        priceEffect: 0.03,
+        answers: [
+          "A coragem dos mortais é fascinante. Ou é coragem, ou é pura tolice. O tempo dirá."
+        ]
+      }
+    ]
+  },
+  identity_history: {
+    npcQuestion: "Muitos buscam o templo pela paz, mas encontram apenas ecos.",
+    options: [
+      {
+        label: "O Xogunato te conhece?",
+        next: "main",
+        priceEffect: 0.05,
+        answers: [
+          "Eles tentaram cobrar impostos sobre o templo uma vez. Enviei três espectros de raposa para o forte deles. Nunca mais voltaram.",
+          "Os cobradores do Xogunato não gostam de bruma fria. É ruim para as armaduras e para a coragem."
+        ]
+      },
+      {
+        label: "Voltar",
+        next: "main",
+        priceEffect: 0,
+        answers: ["Deixemos o passado com os mortos."]
+      }
+    ]
+  },
+  artifacts: {
+    npcQuestion: "Encantamentos e relíquias exigem grande responsabilidade.",
+    options: [
+      {
+        label: "A espada rúnica é segura?",
         next: "main",
         priceEffect: 0.02,
         answers: [
-          "Poucos conseguem. Menos ainda gostam.",
-          "Ler o fim estraga a história e raramente evita o corte.",
-          "Ainda assim, respeito disciplina."
+          "Para quem a empunha, sim. Para quem está do outro lado, é um pesadelo de prata e luz violeta.",
+          "Nenhuma arma mágica é totalmente segura. Ela consome um pouco de quem a usa. Mas corta que é uma beleza."
         ]
       },
       {
-        label: "Fecharia o livro.",
+        label: "E a runa da névoa?",
         next: "main",
-        priceEffect: -0.06,
+        priceEffect: -0.01,
         answers: [
-          "Excelente. A melhor sabedoria é saber qual porta não abrir.",
-          "Você acabou de salvar uma noite de sono.",
-          "Clientes prudentes recebem meu melhor preço de hoje."
+          "Ela distorce a percepção ao seu redor. Os guardas olharão diretamente para você e verão apenas fumaça e vento.",
+          "Use-a com sutileza. Se correr fazendo barulho, a runa não vai abafar seus passos pesados."
         ]
+      },
+      {
+        label: "Voltar",
+        next: "main",
+        priceEffect: 0,
+        answers: ["Procure nas prateleiras com seus próprios olhos."]
+      }
+    ]
+  },
+  secrets: {
+    npcQuestion: "As brumas escondem verdades que muitos preferem enterrar.",
+    options: [
+      {
+        label: "E o Clã sem Brasão?",
+        next: "main",
+        priceEffect: 0.03,
+        answers: [
+          "Eles andam pelas sombras do Mercado de Okami. Soiren Kisuke sabe como contatá-los. Eu prefiro a companhia dos espíritos.",
+          "Eles são homens perdidos buscando um propósito. Aqui nas brumas, só há propósitos perdidos buscando homens."
+        ]
+      },
+      {
+        label: "Qual o segredo da fênix?",
+        next: "main",
+        priceEffect: 0.04,
+        answers: [
+          "Ela renasce das cinzas, sim. Mas a dor do fogo é real a cada ciclo. A imortalidade é uma maldição disfarçada de dádiva.",
+          "O pó de fênix que vendo é coletado com respeito. Não peça para ver a criatura, ela não gosta de visitas."
+        ]
+      },
+      {
+        label: "Voltar",
+        next: "main",
+        priceEffect: 0,
+        answers: ["Algumas cortinas de fumaça devem permanecer fechadas."]
       }
     ]
   }

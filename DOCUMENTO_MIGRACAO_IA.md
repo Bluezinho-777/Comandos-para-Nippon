@@ -781,3 +781,41 @@ Principais melhorias desejadas:
 
 Nao apague a personalidade do projeto. O objetivo e evoluir um prototipo de RPG narrativo com loja e NPC forte.
 
+## 16. Melhorias e Ajustes Concluídos (Junho de 2026)
+
+O projeto recebeu as atualizações descritas como pendentes e agora conta com o seguinte estado de implementação:
+
+1. **Revisão Ortográfica e Acentuação**: Todos os arquivos de dados (`data/*.js`) e scripts receberam revisão completa para Português do Brasil, corrigindo acentos de palavras-chave (ex: *você, memória, crônica, próxima, brasão, lâmina, santuário, informação*).
+2. **Correção de Pastas de Assets**: Caminhos de imagem foram padronizados de `assents.img` para o diretório correto `assets/img/` no script principal.
+3. **Moedas e Economia Dinâmica**: 
+   - HUD com carteira de ouro adicionado no cabeçalho das telas.
+   - Venda de itens no inventário agora devolve **70% do preço de compra reajustado** do item.
+   - O preço dos itens da loja reage dinamicamente baseando-se nas opções escolhidas nos diálogos com Soiren Kisuke (-25% a +30%).
+4. **Persistência de Dados**: Progresso salvo em `localStorage` (ouro, inventário, modificador de preço e status do mural). Botão para resetar progresso adicionado.
+5. **Separação de Módulos de Dados**: Criada a pasta `data/` separando `items.js`, `dialogs.js`, `mural.js` e a recém-criada `lore.js`.
+6. **Mural de Contratos e Missões**: Mural totalmente ativo com 5 missões/contratos jogáveis, exigência e consumo de itens específicos do inventário e recompensas financeiras e de reputação.
+7. **Abas de Filtragem de Lore**: Inserida barra de filtragem com botões por categoria (*Todos, Reino, Clãs, Artefatos, Personagens e Outros*) na tela pública de Lore.
+8. **Oficina de Lore & LocalStorage Fallback**:
+   - Criação da base de dados local offline de Lore (`data/lore.js`) para carregamento inicial.
+   - Oficina de Lore agora tem botões para **Criar**, **Editar** e **Apagar** lores na seção de Mestre (Criador).
+   - Suporte a fallback local via `localStorage` para gerenciar as histórias sem necessitar do Firebase conectado.
+9. **Status e Humor Dinâmico do NPC**: Kisuke-san agora possui humor dinâmico que se altera conforme os preços e suas atitudes durante as escolhas no chat (`humor: satisfeito | amigável | cauteloso | irritado | hostil`).
+
+## 17. Evolução do Mural e Fichas de Personagem (Dossiês) (Julho de 2026)
+
+Implementamos a expansão do Mural de Contratos para se comportar como um painel de avisos vivo in-world e adicionamos o sistema de Dossiês Confidenciais de Personagem:
+
+1. **Estruturação do Mural**:
+   - Adicionadas tags visuais temáticas de Dificuldade (*Fácil, Moderada, Perigosa, Mortal* — esta última pulsando em vermelho-sangue).
+   - Tempo estimado narrativo (ex: *"uma noite"*, *"três sóis"*) e recompensas baseadas em reputação no mercado integradas nos cartazes.
+   - Geração de avisos narrativos in-world dinâmicos a partir de dados usando templates em `data/mural.js`.
+   - CRUD completo de Missões/Contratos no painel do criador.
+2. **Dossiês de Personagem (Batman Arkham Style)**:
+   - Adicionado arquivo de dados `data/characters.js` contendo os perfis iniciais.
+   - Botão **👥 Dossiês** integrado de forma harmônica ao lado do botão de voltar no cabeçalho do Mural.
+   - Visual de "arquivo confidencial" contendo retrato pixelado, nome, título, facção, status, traços, relação com o jogador, biografia e um carimbo de "CONFIDENCIAL".
+   - Oficina de Dossiês (CRUD) com upload de avatar, status de aprovação (*aprovada, pendente, oculta*) e controle de segredos visível apenas para mestres.
+   - Filtro de segurança: jogadores (Players) apenas enxergam dossiês com aprovação `"aprovada"`.
+3. **Ajustes de UI / Bugfixes**:
+   - Corrigida a colisão e sobreposição no cabeçalho da tela de Contratos tornando a estrutura de grid flexível com `minmax(124px, auto)` e adicionando `gap: 16px`.
+   - Corrigido o fundo branco indevido na abertura das caixas de seleção do jogo (elementos `<option>` dentro de `<select>`), estilizando-os agora com a cor de carvão escuro `#15100e` e texto dourado `#fff0ce`.

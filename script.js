@@ -38,6 +38,8 @@ const maxVisibleChatMessages = 3;
 
 // Estado global do jogador e jogo
 let playerCoins = 150;
+let playerEssences = 50; // Nova moeda da segunda loja
+let activeShop = "normal"; // Loja ativa ("normal" ou "magic")
 let inventoryItems = [];
 let shopPriceModifier = 0;
 const dialogAnswerIndexes = {};
@@ -90,33 +92,61 @@ let currentDialogNode = "main";
 function saveGameToLocalStorage() {
   const gameState = {
     playerCoins,
+    playerEssences,
     inventoryItems,
     shopPriceModifier,
     dialogAnswerIndexes,
     muralMissions: muralMissions.map(m => ({ id: m.id, status: m.status }))
   };
   localStorage.setItem("nippon_era_save", JSON.stringify(gameState));
+  if (!firebaseDb || !currentRpgId) {
+    localStorage.setItem("nippon_era_local_mural", JSON.stringify(muralMissions));
+    localStorage.setItem("nippon_era_local_dossiers", JSON.stringify(characterDossiers));
+  }
 }
 
 function loadGameFromLocalStorage() {
-  // Inicializa as missões com status padrão
-  muralMissions = initialMissions.map(m => ({
-    ...m,
-    status: "available"
-  }));
+  // Carrega a lista de missões local primeiro
+  const savedMural = localStorage.getItem("nippon_era_local_mural");
+  if (savedMural) {
+    try {
+      muralMissions = JSON.parse(savedMural);
+    } catch (e) {
+      console.error(e);
+      muralMissions = initialMissions.map(m => ({ ...m, status: "available" }));
+    }
+  } else {
+    muralMissions = initialMissions.map(m => ({ ...m, status: "available" }));
+    localStorage.setItem("nippon_era_local_mural", JSON.stringify(muralMissions));
+  }
+
+  // Carrega a lista de dossiês local
+  const savedDossiers = localStorage.getItem("nippon_era_local_dossiers");
+  if (savedDossiers) {
+    try {
+      characterDossiers = JSON.parse(savedDossiers);
+    } catch (e) {
+      console.error(e);
+      characterDossiers = initialDossiers;
+    }
+  } else {
+    characterDossiers = initialDossiers;
+    localStorage.setItem("nippon_era_local_dossiers", JSON.stringify(characterDossiers));
+  }
 
   const saved = localStorage.getItem("nippon_era_save");
   if (saved) {
     try {
       const gameState = JSON.parse(saved);
       playerCoins = gameState.playerCoins ?? 150;
+      playerEssences = gameState.playerEssences ?? 50;
       inventoryItems = [];
       shopPriceModifier = gameState.shopPriceModifier ?? 0;
       
       // Restaura índices de respostas
       Object.assign(dialogAnswerIndexes, gameState.dialogAnswerIndexes || {});
       
-      // Restaura status das missões
+      // Restaura status das missões (retrocompatibilidade)
       if (gameState.muralMissions) {
         gameState.muralMissions.forEach(savedM => {
           const mission = muralMissions.find(m => m.id === savedM.id);
@@ -138,6 +168,7 @@ function loadGameFromLocalStorage() {
 
 function initializeNewGame() {
   playerCoins = 150;
+  playerEssences = 50;
   inventoryItems = [];
   shopPriceModifier = 0;
   
@@ -147,9 +178,15 @@ function initializeNewGame() {
   }
   
   // Reseta missões para disponível
-  muralMissions.forEach(m => {
-    m.status = "available";
-  });
+  muralMissions = initialMissions.map(m => ({
+    ...m,
+    status: "available"
+  }));
+  localStorage.setItem("nippon_era_local_mural", JSON.stringify(muralMissions));
+
+  // Reseta dossiês
+  characterDossiers = initialDossiers;
+  localStorage.setItem("nippon_era_local_dossiers", JSON.stringify(characterDossiers));
 
   saveGameToLocalStorage();
 }
@@ -158,12 +195,18 @@ function initializeNewGame() {
 
 function updateCoinsUI() {
   const shopCoins = document.querySelector("#shop-coins-value");
+  const shopMagicCoins = document.querySelector("#shop-magic-coins-value");
   const inventoryCoins = document.querySelector("#inventory-coins-value");
+  const inventoryMagicCoins = document.querySelector("#inventory-magic-coins-value");
   const muralCoins = document.querySelector("#mural-coins-value");
+  const muralMagicCoins = document.querySelector("#mural-magic-coins-value");
 
   if (shopCoins) shopCoins.textContent = playerCoins;
+  if (shopMagicCoins) shopMagicCoins.textContent = playerEssences;
   if (inventoryCoins) inventoryCoins.textContent = playerCoins;
+  if (inventoryMagicCoins) inventoryMagicCoins.textContent = playerEssences;
   if (muralCoins) muralCoins.textContent = playerCoins;
+  if (muralMagicCoins) muralMagicCoins.textContent = playerEssences;
 }
 
 // --- FIREBASE SETUP ---
@@ -338,8 +381,56 @@ async function setCurrentRpgContext(rpgId, role = "player") {
     loadShopItemsFromDb(),
     loadPlayerInventoryFromDb(),
     loadLoreFromDb(),
+    loadMissionsFromDb(),
+    loadDossiersFromDb(),
     canUseCreatorPanel() ? loadCreatorDashboardData() : Promise.resolve()
   ]);
+}
+
+async function loadDossiersFromDb() {
+  if (!firebaseDb || !currentRpgId) {
+    return;
+  }
+
+  try {
+    const snapshot = await firebaseDb
+      .collection("rpgDossiers")
+      .where("rpgId", "==", currentRpgId)
+      .get();
+
+    if (!snapshot.empty) {
+      characterDossiers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } else {
+      characterDossiers = initialDossiers;
+    }
+    if (currentMuralSubView === "dossiers") {
+      renderDossiers();
+    }
+  } catch (error) {
+    console.error("Erro ao carregar dossiês do banco:", error);
+  }
+}
+
+async function loadMissionsFromDb() {
+  if (!firebaseDb || !currentRpgId) {
+    return;
+  }
+
+  try {
+    const snapshot = await firebaseDb
+      .collection("rpgMissions")
+      .where("rpgId", "==", currentRpgId)
+      .get();
+
+    if (!snapshot.empty) {
+      muralMissions = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } else {
+      muralMissions = initialMissions.map(m => ({ ...m, status: "available" }));
+    }
+    renderMural();
+  } catch (error) {
+    console.error("Erro ao carregar missões do banco:", error);
+  }
 }
 
 async function loadUserRpgContext(user, fallbackRole = "player") {
@@ -388,15 +479,14 @@ async function loadUserRpgContext(user, fallbackRole = "player") {
   currentMemberRole = fallbackRole;
   updateRoleVisibility();
   setCreatorStatus("Nenhuma campanha vinculada a esta conta ainda.", "warning");
-  await Promise.all([loadShopItemsFromDb(), loadPlayerInventoryFromDb(), loadLoreFromDb()]);
+  await Promise.all([loadShopItemsFromDb(), loadPlayerInventoryFromDb()]);
 }
 
 function normalizeFirestoreItem(doc) {
   const data = doc.data ? doc.data() : doc;
-
   return {
-    id: doc.id || data.id,
-    firestoreId: doc.id || data.firestoreId,
+    firestoreId: doc.id || "",
+    id: data.id || doc.id || "",
     name: data.name || "Item sem nome",
     category: data.category || "Tralhas",
     rarity: data.rarity || "Comum",
@@ -408,10 +498,13 @@ function normalizeFirestoreItem(doc) {
     extra: data.extra || "",
     description: data.description || "",
     story: data.story || "",
-    npcLine: data.npcLine || "Kisuke-san ainda não escreveu uma opinião sobre isto.",
+    npcLine: data.npcLine || (data.shopType === "magic" 
+      ? "Genzo-sama ainda não proferiu sua sabedoria sobre este item." 
+      : "Kisuke-san ainda não escreveu uma opinião sobre isto."),
     imageUrl: data.imageUrl || "",
     stock: Number.isFinite(Number(data.stock)) ? Number(data.stock) : -1,
     active: data.active !== false,
+    shopType: data.shopType || "normal",
     createdBy: data.createdBy || "",
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null
@@ -420,7 +513,11 @@ function normalizeFirestoreItem(doc) {
 
 async function loadShopItemsFromDb() {
   if (!firebaseDb || !currentRpgId) {
-    shopItems.splice(0, shopItems.length);
+    const localItems = [
+      ...archivedShopItems.map(item => ({ ...item, shopType: "normal" })),
+      ...archivedMagicShopItems.map(item => ({ ...item, shopType: "magic" }))
+    ];
+    shopItems.splice(0, shopItems.length, ...localItems);
     renderShopItems();
     return;
   }
@@ -476,7 +573,25 @@ async function loadPlayerInventoryFromDb() {
 
 async function loadLoreFromDb() {
   if (!firebaseDb || !currentRpgId) {
-    rpgLoreEntries = [];
+    // FALLBACK TO LOCALSTORAGE
+    const saved = localStorage.getItem("nippon_era_local_lore");
+    if (saved) {
+      try {
+        rpgLoreEntries = JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+        rpgLoreEntries = [];
+      }
+    } else {
+      // Prepopulate with initialLores from data/lore.js
+      rpgLoreEntries = [...initialLores];
+      localStorage.setItem("nippon_era_local_lore", JSON.stringify(rpgLoreEntries));
+    }
+    // Filter if player (draft vs published)
+    if (!canEditLore()) {
+      rpgLoreEntries = rpgLoreEntries.filter(entry => entry.status === "published");
+    }
+    rpgLoreEntries.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
     renderLore();
     return;
   }
@@ -505,15 +620,33 @@ function renderLore() {
   }
 
   loreList.innerHTML = "";
+  
+  // Show static lore placeholder sections only if there are no database entries and active category is Todos
+  const hasDbEntries = rpgLoreEntries.length > 0;
   document.querySelectorAll(".static-lore").forEach((section) => {
-    section.hidden = rpgLoreEntries.length > 0;
+    section.hidden = hasDbEntries || activeLoreCategory !== "Todos";
   });
 
   if (rpgLoreEntries.length === 0) {
     return;
   }
 
-  rpgLoreEntries.forEach((entry) => {
+  // Filter by category
+  const filteredEntries = rpgLoreEntries.filter((entry) => {
+    if (activeLoreCategory === "Todos") return true;
+    const cat = entry.category || "Outros";
+    if (activeLoreCategory === "Outros") {
+      return ["Lugares", "Missões", "Segredos", "Outros"].includes(cat) || !["Reino", "Clãs", "Artefatos", "Personagens"].includes(cat);
+    }
+    return cat === activeLoreCategory;
+  });
+
+  if (filteredEntries.length === 0) {
+    loreList.innerHTML = `<p class="empty-state">Nenhum registro encontrado nesta categoria.</p>`;
+    return;
+  }
+
+  filteredEntries.forEach((entry) => {
     const section = document.createElement("section");
     section.className = "lore-section";
 
@@ -537,7 +670,9 @@ async function loadCreatorDashboardData() {
     loadCreatorItems(),
     loadCreatorInventories(),
     loadCreatorLore(),
-    loadCreatorLogs()
+    loadCreatorLogs(),
+    loadCreatorMural(),
+    loadCreatorDossiers()
   ]);
 }
 
@@ -548,6 +683,7 @@ function itemPayloadFromForm() {
     category: getInputValue("#item-category"),
     rarity: getInputValue("#item-rarity"),
     price: Number(getInputValue("#item-price")) || 1,
+    shopType: getInputValue("#item-shop-type") || "normal",
     damage: getInputValue("#item-damage"),
     defense: getInputValue("#item-defense"),
     healing: getInputValue("#item-healing"),
@@ -572,6 +708,10 @@ function clearItemForm() {
   if (activeInput) {
     activeInput.checked = true;
   }
+  const shopTypeSelect = document.querySelector("#item-shop-type");
+  if (shopTypeSelect) {
+    shopTypeSelect.value = "normal";
+  }
 }
 
 function fillItemForm(item) {
@@ -580,6 +720,10 @@ function fillItemForm(item) {
   document.querySelector("#item-category").value = item.category || "Tralhas";
   document.querySelector("#item-rarity").value = item.rarity || "Comum";
   document.querySelector("#item-price").value = item.price || 1;
+  const shopTypeSelect = document.querySelector("#item-shop-type");
+  if (shopTypeSelect) {
+    shopTypeSelect.value = item.shopType || "normal";
+  }
   document.querySelector("#item-damage").value = item.damage || "";
   document.querySelector("#item-defense").value = item.defense || "";
   document.querySelector("#item-healing").value = item.healing || "";
@@ -791,7 +935,7 @@ function fillLoreForm(entry) {
 async function handleCreatorLoreSubmit(event) {
   event.preventDefault();
 
-  if (!requireFirebase() || !currentRpgId || !canEditLore()) {
+  if (!canEditLore()) {
     setCreatorStatus("Você não tem permissão para editar lore.", "error");
     return;
   }
@@ -800,6 +944,47 @@ async function handleCreatorLoreSubmit(event) {
   const payload = lorePayloadFromForm();
 
   try {
+    if (!firebaseDb || !currentRpgId) {
+      // Local save/create
+      let localLores = [];
+      const saved = localStorage.getItem("nippon_era_local_lore");
+      if (saved) {
+        try {
+          localLores = JSON.parse(saved);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (loreId) {
+        // Edit
+        const index = localLores.findIndex(e => e.id === loreId);
+        if (index !== -1) {
+          localLores[index] = {
+            ...localLores[index],
+            ...payload,
+            updatedAt: new Date().toISOString()
+          };
+        }
+      } else {
+        // Create new
+        const newLore = {
+          ...payload,
+          id: "local_" + Date.now(),
+          createdBy: "local-creator",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        localLores.push(newLore);
+      }
+
+      localStorage.setItem("nippon_era_local_lore", JSON.stringify(localLores));
+      clearLoreForm();
+      setCreatorStatus("Lore salva com sucesso (local).", "success");
+      await Promise.all([loadLoreFromDb(), loadCreatorLore()]);
+      return;
+    }
+
     if (loreId) {
       await firebaseDb.collection("rpgLore").doc(loreId).set(
         {
@@ -839,19 +1024,35 @@ async function loadCreatorLore() {
 
   creatorLoreList.innerHTML = "";
 
-  if (!firebaseDb || !currentRpgId || !canUseCreatorPanel()) {
+  if (!canUseCreatorPanel()) {
     creatorLoreList.textContent = "Entre como criador para ver a lore.";
     return;
   }
 
-  const snapshot = await firebaseDb
-    .collection("rpgLore")
-    .where("rpgId", "==", currentRpgId)
-    .get();
+  let entries = [];
+  try {
+    if (!firebaseDb || !currentRpgId) {
+      // Local fallback
+      const saved = localStorage.getItem("nippon_era_local_lore");
+      if (saved) {
+        entries = JSON.parse(saved);
+      } else {
+        entries = [...initialLores];
+        localStorage.setItem("nippon_era_local_lore", JSON.stringify(entries));
+      }
+    } else {
+      const snapshot = await firebaseDb
+        .collection("rpgLore")
+        .where("rpgId", "==", currentRpgId)
+        .get();
 
-  const entries = snapshot.docs
-    .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+      entries = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  entries.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
 
   if (entries.length === 0) {
     creatorLoreList.innerHTML = `<p class="empty-state">Nenhuma lore escrita para esta campanha.</p>`;
@@ -868,15 +1069,457 @@ async function loadCreatorLore() {
     const meta = document.createElement("p");
     meta.textContent = `${entry.category || "Lore"} | ${entry.status === "published" ? "publicado" : "rascunho"} | ordem ${entry.order || 1}`;
 
+    const actions = document.createElement("div");
+    actions.className = "creator-card-actions";
+
     const editButton = document.createElement("button");
     editButton.className = "auth-submit auth-submit--ghost";
     editButton.type = "button";
     editButton.textContent = "Editar";
     editButton.addEventListener("click", () => fillLoreForm(entry));
 
-    card.append(title, meta, editButton);
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "auth-submit auth-submit--ghost";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Apagar";
+    deleteButton.addEventListener("click", async () => {
+      if (!confirm(`Deseja realmente apagar a lore "${entry.title}"?`)) {
+        return;
+      }
+      if (!canEditLore()) {
+        setCreatorStatus("Você não tem permissão para apagar lore.", "error");
+        return;
+      }
+      try {
+        if (!firebaseDb || !currentRpgId) {
+          let localLores = [];
+          const saved = localStorage.getItem("nippon_era_local_lore");
+          if (saved) {
+            localLores = JSON.parse(saved);
+          }
+          localLores = localLores.filter(e => e.id !== entry.id);
+          localStorage.setItem("nippon_era_local_lore", JSON.stringify(localLores));
+          setCreatorStatus("Lore apagada com sucesso (local).", "success");
+          await Promise.all([loadLoreFromDb(), loadCreatorLore()]);
+        } else {
+          await firebaseDb.collection("rpgLore").doc(entry.id).delete();
+          await writeRpgLog("lore.deleted", "rpgLore", entry.id, `${currentUser.email} apagou a lore ${entry.title}.`);
+          setCreatorStatus("Lore apagada com sucesso.", "success");
+          await Promise.all([loadLoreFromDb(), loadCreatorLore(), loadCreatorLogs()]);
+        }
+      } catch (error) {
+        console.error(error);
+        setCreatorStatus("Não foi possível apagar a lore.", "error");
+      }
+    });
+
+    actions.append(editButton, deleteButton);
+    card.append(title, meta, actions);
     creatorLoreList.append(card);
   });
+}
+
+function checkMissionRequirement(mission, inventory) {
+  if (typeof mission.checkRequirement === "function") {
+    return mission.checkRequirement(inventory);
+  }
+  
+  if (!mission.requiredType || mission.requiredType === "none") {
+    return true;
+  }
+  
+  if (mission.requiredType === "category") {
+    return inventory.some(item => item.category === mission.requiredValue);
+  }
+  
+  if (mission.requiredType === "item") {
+    const requiredValue = mission.requiredValue || "";
+    const requiredIds = typeof requiredValue === "string"
+      ? requiredValue.split(",").map(s => s.trim())
+      : (Array.isArray(requiredValue) ? requiredValue : []);
+    
+    return inventory.some(item => requiredIds.includes(item.id));
+  }
+  
+  return true;
+}
+
+async function loadCreatorMural() {
+  const creatorMuralList = document.querySelector("#creator-mural-list");
+  if (!creatorMuralList) {
+    return;
+  }
+
+  creatorMuralList.innerHTML = "";
+
+  if (!canUseCreatorPanel()) {
+    creatorMuralList.textContent = "Entre como criador para ver o mural.";
+    return;
+  }
+
+  if (muralMissions.length === 0) {
+    creatorMuralList.innerHTML = `<p class="empty-state">Nenhum contrato cadastrado no mural.</p>`;
+    return;
+  }
+
+  muralMissions.forEach((mission) => {
+    const card = document.createElement("article");
+    card.className = "creator-card";
+
+    const title = document.createElement("h3");
+    title.textContent = mission.title || "Contrato sem título";
+
+    const meta = document.createElement("p");
+    const statusText = mission.status === "completed" ? "concluído" : (mission.status === "accepted" ? "aceito" : "disponível");
+    meta.textContent = `${mission.difficulty || "Moderada"} | ${mission.timeEstimate || "uma noite"} | 🪙 ${mission.reward} moedas | ${statusText}`;
+
+    const actions = document.createElement("div");
+    actions.className = "creator-card-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "auth-submit auth-submit--ghost";
+    editButton.type = "button";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => fillMuralForm(mission));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "auth-submit auth-submit--ghost";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Apagar";
+    deleteButton.addEventListener("click", async () => {
+      if (!confirm(`Deseja realmente apagar o contrato "${mission.title}"?`)) {
+        return;
+      }
+      if (!canUseCreatorPanel()) {
+        setCreatorStatus("Você não tem permissão para apagar contratos.", "error");
+        return;
+      }
+      try {
+        if (!firebaseDb || !currentRpgId) {
+          muralMissions = muralMissions.filter(m => m.id !== mission.id);
+          localStorage.setItem("nippon_era_local_mural", JSON.stringify(muralMissions));
+          setCreatorStatus("Contrato apagado com sucesso (local).", "success");
+          await Promise.all([renderMural(), loadCreatorMural()]);
+        } else {
+          await firebaseDb.collection("rpgMissions").doc(mission.id).delete();
+          await writeRpgLog("mission.deleted", "rpgMissions", mission.id, `${currentUser.email} apagou o contrato ${mission.title}.`);
+          setCreatorStatus("Contrato apagado com sucesso do banco.", "success");
+          muralMissions = muralMissions.filter(m => m.id !== mission.id);
+          await Promise.all([renderMural(), loadCreatorMural(), loadCreatorLogs()]);
+        }
+      } catch (error) {
+        console.error(error);
+        setCreatorStatus("Não foi possível apagar o contrato.", "error");
+      }
+    });
+
+    actions.append(editButton, deleteButton);
+    card.append(title, meta, actions);
+    creatorMuralList.append(card);
+  });
+}
+
+function fillMuralForm(mission) {
+  document.querySelector("#mission-id").value = mission.id || "";
+  document.querySelector("#mission-title").value = mission.title || "";
+  document.querySelector("#mission-difficulty").value = mission.difficulty || "Moderada";
+  document.querySelector("#mission-time").value = mission.timeEstimate || "";
+  document.querySelector("#mission-reward").value = mission.reward || 100;
+  document.querySelector("#mission-reputation").value = mission.reputationReward || "0";
+  document.querySelector("#mission-req-type").value = mission.requiredType || "none";
+  document.querySelector("#mission-req-value").value = mission.requiredValue || "";
+  document.querySelector("#mission-req-text").value = mission.requirementText || "";
+  document.querySelector("#mission-consume").checked = mission.consumeItem !== false && mission.consumeItem !== "false";
+  document.querySelector("#mission-desc").value = mission.description || "";
+}
+
+function clearMuralForm() {
+  document.querySelector("#creator-mural-form")?.reset();
+  const idInput = document.querySelector("#mission-id");
+  if (idInput) {
+    idInput.value = "";
+  }
+}
+
+async function handleCreatorMuralSubmit(event) {
+  event.preventDefault();
+
+  if (!canUseCreatorPanel()) {
+    setCreatorStatus("Você não tem permissão para editar o mural.", "error");
+    return;
+  }
+
+  const id = getInputValue("#mission-id");
+  const payload = {
+    title: getInputValue("#mission-title"),
+    difficulty: getInputValue("#mission-difficulty"),
+    timeEstimate: getInputValue("#mission-time"),
+    reward: Number(getInputValue("#mission-reward")) || 100,
+    reputationReward: Number(getInputValue("#mission-reputation")) || 0,
+    requiredType: getInputValue("#mission-req-type"),
+    requiredValue: getInputValue("#mission-req-value"),
+    requirementText: getInputValue("#mission-req-text"),
+    consumeItem: document.querySelector("#mission-consume")?.checked ? true : false,
+    description: getInputValue("#mission-desc"),
+    status: "available"
+  };
+
+  try {
+    if (!firebaseDb || !currentRpgId) {
+      // Local save
+      if (id) {
+        // Edit
+        const index = muralMissions.findIndex(m => m.id === id);
+        if (index !== -1) {
+          muralMissions[index] = {
+            ...muralMissions[index],
+            ...payload,
+            status: muralMissions[index].status || "available"
+          };
+        }
+      } else {
+        // Create
+        const newMission = {
+          ...payload,
+          id: "mission_" + Date.now()
+        };
+        muralMissions.push(newMission);
+      }
+      localStorage.setItem("nippon_era_local_mural", JSON.stringify(muralMissions));
+      clearMuralForm();
+      setCreatorStatus("Contrato salvo no mural (local).", "success");
+      await Promise.all([renderMural(), loadCreatorMural()]);
+      return;
+    }
+
+    // Firebase mode
+    if (id) {
+      await firebaseDb.collection("rpgMissions").doc(id).set(
+        {
+          ...payload,
+          rpgId: currentRpgId,
+          updatedAt: fieldValue().serverTimestamp()
+        },
+        { merge: true }
+      );
+      await writeRpgLog("mission.updated", "rpgMissions", id, `${currentUser.email} editou o contrato ${payload.title}.`, payload);
+    } else {
+      const docRef = await firebaseDb.collection("rpgMissions").add({
+        ...payload,
+        rpgId: currentRpgId,
+        createdBy: currentUser.uid,
+        createdAt: fieldValue().serverTimestamp(),
+        updatedAt: fieldValue().serverTimestamp()
+      });
+      await writeRpgLog("mission.created", "rpgMissions", docRef.id, `${currentUser.email} criou o contrato ${payload.title}.`, payload);
+    }
+
+    // Refresh memory missions from DB
+    const snapshot = await firebaseDb.collection("rpgMissions").where("rpgId", "==", currentRpgId).get();
+    muralMissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    clearMuralForm();
+    setCreatorStatus("Contrato salvo no mural da campanha.", "success");
+    await Promise.all([renderMural(), loadCreatorMural(), loadCreatorLogs()]);
+  } catch (error) {
+    console.error(error);
+    setCreatorStatus("Não foi possível salvar o contrato.", "error");
+  }
+}
+
+async function loadCreatorDossiers() {
+  const creatorDossiersList = document.querySelector("#creator-dossiers-list");
+  if (!creatorDossiersList) return;
+
+  creatorDossiersList.innerHTML = "";
+
+  if (!canUseCreatorPanel()) {
+    creatorDossiersList.textContent = "Entre como criador para ver a oficina de dossiês.";
+    return;
+  }
+
+  if (characterDossiers.length === 0) {
+    creatorDossiersList.innerHTML = `<p class="empty-state">Nenhum dossiê cadastrado.</p>`;
+    return;
+  }
+
+  characterDossiers.forEach((dossier) => {
+    const card = document.createElement("article");
+    card.className = "creator-card";
+
+    const title = document.createElement("h3");
+    title.textContent = dossier.name || "Dossiê sem nome";
+
+    const meta = document.createElement("p");
+    meta.textContent = `${dossier.title || "Sem título"} | ${dossier.faction || "Sem facção"} | status: ${dossier.approval}`;
+
+    const actions = document.createElement("div");
+    actions.className = "creator-card-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "auth-submit auth-submit--ghost";
+    editButton.type = "button";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => fillDossierForm(dossier));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "auth-submit auth-submit--ghost";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Apagar";
+    deleteButton.addEventListener("click", async () => {
+      if (!confirm(`Deseja realmente apagar o dossiê de "${dossier.name}"?`)) {
+        return;
+      }
+      if (!canUseCreatorPanel()) {
+        setCreatorStatus("Você não tem permissão para apagar dossiês.", "error");
+        return;
+      }
+      try {
+        if (!firebaseDb || !currentRpgId) {
+          characterDossiers = characterDossiers.filter(d => d.id !== dossier.id);
+          localStorage.setItem("nippon_era_local_dossiers", JSON.stringify(characterDossiers));
+          setCreatorStatus("Dossiê apagado com sucesso (local).", "success");
+          await Promise.all([renderDossiers(), loadCreatorDossiers()]);
+        } else {
+          await firebaseDb.collection("rpgDossiers").doc(dossier.id).delete();
+          await writeRpgLog("dossier.deleted", "rpgDossiers", dossier.id, `${currentUser.email} apagou o dossiê de ${dossier.name}.`);
+          setCreatorStatus("Dossiê apagado com sucesso do banco.", "success");
+          characterDossiers = characterDossiers.filter(d => d.id !== dossier.id);
+          await Promise.all([renderDossiers(), loadCreatorDossiers(), loadCreatorLogs()]);
+        }
+      } catch (error) {
+        console.error(error);
+        setCreatorStatus("Não foi possível apagar o dossiê.", "error");
+      }
+    });
+
+    actions.append(editButton, deleteButton);
+    card.append(title, meta, actions);
+    creatorDossiersList.append(card);
+  });
+}
+
+function fillDossierForm(dossier) {
+  document.querySelector("#dossier-id").value = dossier.id || "";
+  document.querySelector("#dossier-name").value = dossier.name || "";
+  document.querySelector("#dossier-title").value = dossier.title || "";
+  document.querySelector("#dossier-faction").value = dossier.faction || "";
+  document.querySelector("#dossier-status").value = dossier.status || "";
+  document.querySelector("#dossier-traits").value = dossier.traits || "";
+  document.querySelector("#dossier-relationship").value = dossier.relationship || "";
+  document.querySelector("#dossier-approval").value = dossier.approval || "aprovada";
+  
+  const avatarVal = dossier.avatarUrl || "assets/img/NPC1.png";
+  document.querySelector("#dossier-avatar").value = avatarVal;
+  const preview = document.querySelector("#dossier-avatar-preview");
+  if (preview) {
+    preview.src = avatarVal;
+  }
+  
+  document.querySelector("#dossier-secrets").value = dossier.secrets || "";
+  document.querySelector("#dossier-biography").value = dossier.biography || "";
+
+  // Abre automaticamente a seção avançada ao editar
+  const detailsSec = document.querySelector(".advanced-details-section");
+  if (detailsSec) {
+    detailsSec.open = true;
+  }
+}
+
+function clearDossierForm() {
+  document.querySelector("#creator-dossiers-form")?.reset();
+  const idInput = document.querySelector("#dossier-id");
+  if (idInput) {
+    idInput.value = "";
+  }
+  const preview = document.querySelector("#dossier-avatar-preview");
+  if (preview) {
+    preview.src = "assets/img/NPC1.png";
+  }
+  const detailsSec = document.querySelector(".advanced-details-section");
+  if (detailsSec) {
+    detailsSec.open = false;
+  }
+}
+
+async function handleCreatorDossierSubmit(event) {
+  event.preventDefault();
+
+  if (!canUseCreatorPanel()) {
+    setCreatorStatus("Você não tem permissão para gerenciar dossiês.", "error");
+    return;
+  }
+
+  const id = getInputValue("#dossier-id");
+  const payload = {
+    name: getInputValue("#dossier-name"),
+    title: getInputValue("#dossier-title"),
+    faction: getInputValue("#dossier-faction"),
+    status: getInputValue("#dossier-status"),
+    traits: getInputValue("#dossier-traits"),
+    relationship: getInputValue("#dossier-relationship"),
+    approval: getInputValue("#dossier-approval"),
+    avatarUrl: getInputValue("#dossier-avatar") || "assets/img/NPC1.png",
+    secrets: getInputValue("#dossier-secrets"),
+    biography: getInputValue("#dossier-biography")
+  };
+
+  try {
+    if (!firebaseDb || !currentRpgId) {
+      // Local mode
+      if (id) {
+        const index = characterDossiers.findIndex(d => d.id === id);
+        if (index !== -1) {
+          characterDossiers[index] = {
+            ...characterDossiers[index],
+            ...payload
+          };
+        }
+      } else {
+        const newDossier = {
+          ...payload,
+          id: "dossier_" + Date.now()
+        };
+        characterDossiers.push(newDossier);
+      }
+      localStorage.setItem("nippon_era_local_dossiers", JSON.stringify(characterDossiers));
+      clearDossierForm();
+      setCreatorStatus("Dossiê salvo com sucesso (local).", "success");
+      await Promise.all([renderDossiers(), loadCreatorDossiers()]);
+      return;
+    }
+
+    // Firebase mode
+    if (id) {
+      await firebaseDb.collection("rpgDossiers").doc(id).set(
+        {
+          ...payload,
+          rpgId: currentRpgId,
+          updatedAt: fieldValue().serverTimestamp()
+        },
+        { merge: true }
+      );
+      await writeRpgLog("dossier.updated", "rpgDossiers", id, `${currentUser.email} editou o dossiê de ${payload.name}.`, payload);
+    } else {
+      const docRef = await firebaseDb.collection("rpgDossiers").add({
+        ...payload,
+        rpgId: currentRpgId,
+        createdBy: currentUser.uid,
+        createdAt: fieldValue().serverTimestamp(),
+        updatedAt: fieldValue().serverTimestamp()
+      });
+      await writeRpgLog("dossier.created", "rpgDossiers", docRef.id, `${currentUser.email} criou o dossiê de ${payload.name}.`, payload);
+    }
+
+    // Reload from Firestore
+    await loadDossiersFromDb();
+    clearDossierForm();
+    setCreatorStatus("Dossiê salvo no banco da campanha.", "success");
+    await Promise.all([renderDossiers(), loadCreatorDossiers(), loadCreatorLogs()]);
+  } catch (error) {
+    console.error(error);
+    setCreatorStatus("Não foi possível salvar o dossiê.", "error");
+  }
 }
 
 async function loadCreatorLogs() {
@@ -1130,27 +1773,31 @@ function getRotateAnswer(key, answers) {
 }
 
 function getNextDefaultLine() {
-  const line = defaultNpcLines[defaultLineIndex];
-  defaultLineIndex = (defaultLineIndex + 1) % defaultNpcLines.length;
+  const lines = activeShop === "magic" ? defaultMagicNpcLines : defaultNpcLines;
+  const line = lines[defaultLineIndex % lines.length];
+  defaultLineIndex = (defaultLineIndex + 1) % lines.length;
   defaultNpcLine = line;
   return line;
 }
 
 function getNextIdleLine() {
-  const line = idleNpcLines[idleLineIndex];
-  idleLineIndex = (idleLineIndex + 1) % idleNpcLines.length;
+  const lines = activeShop === "magic" ? idleMagicNpcLines : idleNpcLines;
+  const line = lines[idleLineIndex % lines.length];
+  idleLineIndex = (idleLineIndex + 1) % lines.length;
   return line;
 }
 
 function getNextHoverLine() {
-  const line = npcHoverLines[hoverLineIndex];
-  hoverLineIndex = (hoverLineIndex + 1) % npcHoverLines.length;
+  const lines = activeShop === "magic" ? magicNpcHoverLines : npcHoverLines;
+  const line = lines[hoverLineIndex % lines.length];
+  hoverLineIndex = (hoverLineIndex + 1) % lines.length;
   return line;
 }
 
 function getNextIntroLine() {
-  const line = dialogIntroLines[introLineIndex];
-  introLineIndex = (introLineIndex + 1) % dialogIntroLines.length;
+  const lines = activeShop === "magic" ? magicDialogIntroLines : dialogIntroLines;
+  const line = lines[introLineIndex % lines.length];
+  introLineIndex = (introLineIndex + 1) % lines.length;
   return line;
 }
 
@@ -1169,14 +1816,15 @@ function getAdjustedPrice(item) {
 }
 
 function getPriceMoodText() {
+  const npcName = activeShop === "magic" ? "Genzo-sama" : "Kisuke-san";
   if (shopPriceModifier <= -0.12) {
-    return " Kisuke-san está generoso hoje.";
+    return ` ${npcName} está generoso hoje.`;
   }
   if (shopPriceModifier <= -0.04) {
     return " Os preços baixaram um pouco.";
   }
   if (shopPriceModifier >= 0.12) {
-    return " Kisuke-san está cobrando caro pela sua curiosidade.";
+    return ` ${npcName} está cobrando caro pela sua curiosidade.`;
   }
   if (shopPriceModifier >= 0.04) {
     return " Os preços subiram um pouco.";
@@ -1200,12 +1848,28 @@ function getPriceStatusText() {
   return "preços: estáveis";
 }
 
+function getNpcHumorText() {
+  if (shopPriceModifier <= -0.15) {
+    return "satisfeito";
+  }
+  if (shopPriceModifier <= -0.04) {
+    return "amigável";
+  }
+  if (shopPriceModifier >= 0.20) {
+    return "hostil";
+  }
+  if (shopPriceModifier >= 0.04) {
+    return "irritado";
+  }
+  return "cauteloso";
+}
+
 function updateChatStatus() {
   if (!chatStatus) {
     return;
   }
   const talkState = isTalkingToNpc ? "conversa ativa" : "conversa em espera";
-  chatStatus.textContent = `humor: cauteloso | ${getPriceStatusText()} | ${talkState}`;
+  chatStatus.textContent = `humor: ${getNpcHumorText()} | ${getPriceStatusText()} | ${talkState}`;
 }
 
 function setChatHistory(text) {
@@ -1253,14 +1917,16 @@ function appendChatMessage(speaker, text, options = {}) {
   const message = document.createElement("p");
   message.className = `chat-message chat-message--${speaker}`;
 
-  const prefix = speaker === "npc" ? "* Kisuke-san: " : "* Você: ";
+  const prefix = speaker === "npc" 
+    ? (activeShop === "magic" ? "* Genzo-sama: " : "* Kisuke-san: ") 
+    : "* Você: ";
   message.textContent = options.instant ? `${prefix}${text}` : prefix;
   chatLog.append(message);
   pruneChatMessages();
   scrollChatToBottom();
 
   if (options.instant) {
-    setChatHistory(`${speaker === "npc" ? "Kisuke-san" : "Você"} disse: ${text}`);
+    setChatHistory(`${speaker === "npc" ? (activeShop === "magic" ? "Genzo-sama" : "Kisuke-san") : "Você"} disse: ${text}`);
     return message;
   }
 
@@ -1274,7 +1940,7 @@ function appendChatMessage(speaker, text, options = {}) {
     if (characterIndex >= text.length) {
       window.clearInterval(npcTypingTimer);
       pruneChatMessages();
-      setChatHistory(`${speaker === "npc" ? "Kisuke-san" : "Você"} disse: ${text}`);
+      setChatHistory(`${speaker === "npc" ? (activeShop === "magic" ? "Genzo-sama" : "Kisuke-san") : "Você"} disse: ${text}`);
 
       if (options.onComplete) {
         options.onComplete();
@@ -1344,7 +2010,8 @@ function renderNpcConversation() {
   }
 
   chatOptions.innerHTML = "";
-  const node = dialogTree[currentDialogNode] || dialogTree["main"];
+  const activeTree = activeShop === "magic" ? dialogTreeMagic : dialogTree;
+  const node = activeTree[currentDialogNode] || activeTree["main"];
 
   if (node.npcQuestion) {
     speakNpcLine(node.npcQuestion);
@@ -1443,19 +2110,27 @@ function createItemDetails(item, includeInventoryActions = false) {
     
     // Mostra o valor que o jogador vai receber de volta (70% do preço ajustado)
     const refundCoins = Math.max(1, Math.round(getAdjustedPrice(item) * 0.7));
-    sellButton.textContent = `Vender (+${refundCoins}🪙)`;
+    const isMagicItem = item.shopType === "magic";
+    const currencyIcon = isMagicItem ? "🔮" : "🪙";
+    sellButton.textContent = `Vender (+${refundCoins}${currencyIcon})`;
     
     sellButton.addEventListener("click", async (event) => {
       event.stopPropagation();
-      console.log(`Item vendido: ${item.name} por ${refundCoins} moedas`);
+      const currencyName = isMagicItem ? "essências" : "moedas";
+      console.log(`Item vendido: ${item.name} por ${refundCoins} ${currencyName}`);
       
-      playerCoins += refundCoins;
+      if (isMagicItem) {
+        playerEssences += refundCoins;
+      } else {
+        playerCoins += refundCoins;
+      }
 
       if (firebaseDb && item.inventoryId) {
         try {
           await firebaseDb.collection("playerInventories").doc(item.inventoryId).delete();
           await writeRpgLog("inventory.updated", "playerInventories", item.inventoryId, `${currentUser?.email || "Jogador"} vendeu ${item.name}.`, {
-            refundCoins
+            refundCoins,
+            currency: currencyName
           });
           await loadPlayerInventoryFromDb();
           if (canUseCreatorPanel()) {
@@ -1463,7 +2138,11 @@ function createItemDetails(item, includeInventoryActions = false) {
           }
         } catch (error) {
           console.error(error);
-          playerCoins -= refundCoins;
+          if (isMagicItem) {
+            playerEssences -= refundCoins;
+          } else {
+            playerCoins -= refundCoins;
+          }
           speakNpcLine("A venda falhou no registro da campanha.", { hideAfter: 3500 });
           return;
         }
@@ -1526,12 +2205,13 @@ function renderShopItems() {
     // Normaliza comparação por causa dos acentos
     const matchesCategory = activeCategory === "Todos" || item.category === activeCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm);
-    return matchesCategory && matchesSearch;
+    const matchesShop = activeShop === "magic" ? item.shopType === "magic" : (!item.shopType || item.shopType === "normal");
+    return matchesCategory && matchesSearch && matchesShop;
   });
 
   shopList.innerHTML = "";
 
-  if (shopItems.length === 0) {
+  if (shopItems.filter(item => activeShop === "magic" ? item.shopType === "magic" : (!item.shopType || item.shopType === "normal")).length === 0) {
     const emptyState = document.createElement("p");
     emptyState.className = "empty-state";
     emptyState.textContent = "As prateleiras aguardam o primeiro carregamento.";
@@ -1574,7 +2254,7 @@ function renderShopItems() {
     const price = document.createElement("strong");
     price.className = "price";
     const adjustedPrice = getAdjustedPrice(item);
-    price.textContent = `${adjustedPrice} moedas`;
+    price.textContent = activeShop === "magic" ? `${adjustedPrice} essências` : `${adjustedPrice} moedas`;
 
     const buyButton = document.createElement("button");
     buyButton.className = "buy-button";
@@ -1582,7 +2262,8 @@ function renderShopItems() {
     buyButton.textContent = "Comprar";
     
     // Desabilita visualmente se o jogador não tiver saldo suficiente
-    if (playerCoins < adjustedPrice) {
+    const playerBalance = activeShop === "magic" ? playerEssences : playerCoins;
+    if (playerBalance < adjustedPrice) {
       buyButton.classList.add("is-disabled");
     }
 
@@ -1601,8 +2282,14 @@ function renderShopItems() {
       }
 
       // Validação de moedas
-      if (playerCoins < adjustedPrice) {
-        speakNpcLine("Você não tem moedas suficientes! Aço e segredos custam caro no Mercado de Okami.", { hideAfter: 3500 });
+      const currencyName = activeShop === "magic" ? "essências" : "moedas";
+      const balance = activeShop === "magic" ? playerEssences : playerCoins;
+      const npcRejectLine = activeShop === "magic" 
+        ? "Você não tem essências suficientes! As brumas e relíquias cobram seu preço espiritual."
+        : "Você não tem moedas suficientes! Aço e segredos custam caro no Mercado de Okami.";
+
+      if (balance < adjustedPrice) {
+        speakNpcLine(npcRejectLine, { hideAfter: 3500 });
         return;
       }
 
@@ -1612,7 +2299,12 @@ function renderShopItems() {
         return;
       }
 
-      playerCoins -= adjustedPrice;
+      if (activeShop === "magic") {
+        playerEssences -= adjustedPrice;
+      } else {
+        playerCoins -= adjustedPrice;
+      }
+
       const newItem = {
         ...item,
         price: adjustedPrice,
@@ -1629,6 +2321,7 @@ function renderShopItems() {
             rarity: item.rarity,
             price: item.price,
             pricePaid: adjustedPrice,
+            shopType: item.shopType || "normal",
             damage: item.damage || "",
             defense: item.defense || "",
             healing: item.healing || "",
@@ -1665,13 +2358,17 @@ function renderShopItems() {
             "item.purchased",
             "rpgItems",
             item.firestoreId || item.id,
-            `${currentUserProfile?.displayName || currentUser.email} comprou ${item.name} por ${adjustedPrice} moedas.`,
+            `${currentUserProfile?.displayName || currentUser.email} comprou ${item.name} por ${adjustedPrice} ${currencyName}.`,
             { itemSnapshot }
           );
           await Promise.all([loadPlayerInventoryFromDb(), loadShopItemsFromDb()]);
         } catch (error) {
           console.error(error);
-          playerCoins += adjustedPrice;
+          if (activeShop === "magic") {
+            playerEssences += adjustedPrice;
+          } else {
+            playerCoins += adjustedPrice;
+          }
           updateCoinsUI();
           speakNpcLine("A compra falhou no registro da campanha. Tente outra vez.", { hideAfter: 3500 });
           return;
@@ -1799,9 +2496,26 @@ function renderMural() {
     const title = document.createElement("h2");
     title.textContent = mission.title;
 
+    // Linha de Meta (Dificuldade e Tempo)
+    const metaRow = document.createElement("div");
+    metaRow.className = "mission-meta-row";
+
+    const diffBadge = document.createElement("span");
+    const diffText = mission.difficulty || "Moderada";
+    // Remove acentos para usar como classe CSS
+    const diffClass = diffText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    diffBadge.className = `difficulty-badge diff-${diffClass}`;
+    diffBadge.textContent = diffText;
+
+    const timeItem = document.createElement("span");
+    timeItem.className = "mission-meta-item";
+    timeItem.innerHTML = `⏳ ${mission.timeEstimate || "uma noite"}`;
+
+    metaRow.append(diffBadge, timeItem);
+
     const desc = document.createElement("p");
     desc.className = "mission-desc";
-    desc.textContent = mission.description;
+    desc.textContent = generateMissionNarrative(mission);
 
     const req = document.createElement("p");
     req.className = "mission-requirement";
@@ -1809,7 +2523,11 @@ function renderMural() {
 
     const rew = document.createElement("p");
     rew.className = "mission-reward";
-    rew.innerHTML = `<strong>Recompensa:</strong> 🪙 ${mission.reward} moedas`;
+    
+    // Calcula o reajuste de reputação para exibição (ex: -2%)
+    const repValue = Math.round((mission.reputationReward || 0) * 100);
+    const repText = repValue !== 0 ? ` | Reputação: ${repValue}% preços` : "";
+    rew.innerHTML = `<strong>Recompensa:</strong> 🪙 ${mission.reward} moedas${repText}`;
 
     const actionArea = document.createElement("div");
     actionArea.className = "mission-actions";
@@ -1837,7 +2555,7 @@ function renderMural() {
       completeBtn.type = "button";
       completeBtn.textContent = "Concluir Contrato";
 
-      const hasReq = mission.checkRequirement(inventoryItems);
+      const hasReq = checkMissionRequirement(mission, inventoryItems);
       if (!hasReq) {
         completeBtn.disabled = true;
         completeBtn.title = "Você não possui os itens necessários.";
@@ -1845,36 +2563,47 @@ function renderMural() {
 
       completeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (!mission.checkRequirement(inventoryItems)) return;
+        if (!checkMissionRequirement(mission, inventoryItems)) return;
 
         // Consumir item do inventário se a missão exigir
-        if (mission.consumeItem) {
+        if (mission.consumeItem && mission.consumeItem !== "false" && mission.consumeItem !== "") {
+          let consumedItemId = null;
           if (Array.isArray(mission.consumeItem)) {
-            // Consome o primeiro item disponível na lista
-            const itemToConsume = mission.consumeItem.find(id => inventoryItems.some(item => item.id === id));
-            if (itemToConsume) {
-              const index = inventoryItems.findIndex(item => item.id === itemToConsume);
-              if (index !== -1) {
-                inventoryItems.splice(index, 1);
-              }
+            consumedItemId = mission.consumeItem.find(id => inventoryItems.some(item => item.id === id));
+          } else if (typeof mission.consumeItem === "string") {
+            const ids = mission.consumeItem.split(",").map(s => s.trim());
+            consumedItemId = ids.find(id => inventoryItems.some(item => item.id === id));
+          } else if (mission.consumeItem === true || mission.consumeItem === "true") {
+            if (mission.requiredType === "item") {
+              const requiredValue = mission.requiredValue || "";
+              const requiredIds = typeof requiredValue === "string" 
+                ? requiredValue.split(",").map(s => s.trim()) 
+                : [];
+              consumedItemId = requiredIds.find(id => inventoryItems.some(id => id.id === id));
+            } else if (mission.requiredType === "category") {
+              const matchedItem = inventoryItems.find(item => item.category === mission.requiredValue);
+              if (matchedItem) consumedItemId = matchedItem.id;
             }
-          } else {
-            const index = inventoryItems.findIndex(item => item.id === mission.consumeItem);
+          }
+
+          if (consumedItemId) {
+            const index = inventoryItems.findIndex(item => item.id === consumedItemId);
             if (index !== -1) {
               inventoryItems.splice(index, 1);
             }
           }
         }
 
-        playerCoins += mission.reward;
+        playerCoins += Number(mission.reward) || 0;
         mission.status = "completed";
         saveGameToLocalStorage();
         updateCoinsUI();
         renderInventory();
         renderMural();
         
-        // Efeito sutil no preço da loja por reputação de missões (reduz preços ligeiramente)
-        applyPriceEffect(-0.01);
+        // Efeito sutil no preço da loja por reputação de missões
+        const priceChange = Number(mission.reputationReward) || -0.01;
+        applyPriceEffect(priceChange);
         speakNpcLine(`Contrato "${mission.title}" cumprido. Excelente. Aqui está o seu pagamento de ${mission.reward} moedas.`, { hideAfter: 4500 });
       });
 
@@ -1888,6 +2617,7 @@ function renderMural() {
     }
 
     card.appendChild(title);
+    card.appendChild(metaRow);
     card.appendChild(desc);
     card.appendChild(req);
     card.appendChild(rew);
@@ -1895,6 +2625,137 @@ function renderMural() {
 
     muralList.appendChild(card);
   });
+}
+
+let currentMuralSubView = "contracts"; // "contracts" or "dossiers"
+
+function renderDossiers() {
+  const dossiersList = document.querySelector("#dossiers-list");
+  const detailCard = document.querySelector("#dossier-detail-card");
+  if (!dossiersList) return;
+
+  dossiersList.innerHTML = "";
+  if (detailCard) detailCard.style.display = "none";
+
+  const isCreator = currentMemberRole === "creator" || currentMemberRole === "owner";
+  // Filter visible dossiers based on role
+  const visibleDossiers = characterDossiers.filter((d) => {
+    if (isCreator) return true; // Creator sees all
+    return d.approval === "aprovada"; // Players see only approved ones
+  });
+
+  if (visibleDossiers.length === 0) {
+    const emptyState = document.createElement("p");
+    emptyState.className = "empty-state";
+    emptyState.textContent = "Nenhum dossiê disponível para visualização.";
+    dossiersList.append(emptyState);
+    return;
+  }
+
+  visibleDossiers.forEach((dossier) => {
+    const card = document.createElement("article");
+    card.className = "dossier-card";
+    
+    // Status Seal for Creators
+    if (isCreator) {
+      const seal = document.createElement("span");
+      seal.className = `dossier-seal seal-${dossier.approval}`;
+      seal.textContent = dossier.approval;
+      card.appendChild(seal);
+    }
+
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "dossier-avatar-wrap";
+    const img = document.createElement("img");
+    img.src = dossier.avatarUrl || "assets/img/NPC1.png";
+    img.alt = `Retrato de ${dossier.name}`;
+    avatarWrap.appendChild(img);
+
+    const name = document.createElement("h3");
+    name.textContent = dossier.name;
+
+    const subtitle = document.createElement("p");
+    subtitle.className = "dossier-subtitle";
+    subtitle.textContent = `${dossier.title} | ${dossier.faction}`;
+
+    card.append(avatarWrap, name, subtitle);
+
+    card.addEventListener("click", () => {
+      openDossierDetail(dossier);
+    });
+
+    dossiersList.appendChild(card);
+  });
+}
+
+function openDossierDetail(dossier) {
+  const detailCard = document.querySelector("#dossier-detail-card");
+  if (!detailCard) return;
+
+  detailCard.innerHTML = "";
+  detailCard.style.display = "block";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "dossier-detail-close";
+  closeBtn.type = "button";
+  closeBtn.innerHTML = "✖";
+  closeBtn.addEventListener("click", () => {
+    detailCard.style.display = "none";
+  });
+
+  const confidentialStamp = document.createElement("div");
+  confidentialStamp.className = "dossier-stamp-confidential";
+  confidentialStamp.textContent = "CONFIDENCIAL";
+
+  const grid = document.createElement("div");
+  grid.className = "dossier-detail-grid";
+
+  const avatar = document.createElement("div");
+  avatar.className = "dossier-detail-avatar";
+  const img = document.createElement("img");
+  img.src = dossier.avatarUrl || "assets/img/NPC1.png";
+  img.alt = dossier.name;
+  avatar.appendChild(img);
+
+  const infoSheet = document.createElement("div");
+  infoSheet.className = "dossier-info-sheet";
+
+  const isCreator = currentMemberRole === "creator" || currentMemberRole === "owner";
+
+  // Fields mapping
+  const fields = [
+    ["Nome", dossier.name],
+    ["Título/Cargo", dossier.title],
+    ["Clã/Facção", dossier.faction],
+    ["Status do Alvo", dossier.status],
+    ["Traços", dossier.traits],
+    ["Relação", dossier.relationship]
+  ];
+
+  if (isCreator && dossier.secrets) {
+    fields.push(["Segredos (Mestre)", dossier.secrets]);
+  }
+
+  fields.forEach(([label, value]) => {
+    if (value) {
+      const field = document.createElement("p");
+      field.className = "dossier-info-field";
+      field.innerHTML = `<strong>${label}:</strong> ${value}`;
+      infoSheet.appendChild(field);
+    }
+  });
+
+  // Biography block
+  const bio = document.createElement("p");
+  bio.className = "dossier-info-field";
+  bio.style.marginTop = "10px";
+  bio.innerHTML = `<strong>Dossiê Narrativo:</strong><br/>${dossier.biography}`;
+  infoSheet.appendChild(bio);
+
+  grid.append(avatar, infoSheet);
+  detailCard.append(closeBtn, confidentialStamp, grid);
+  
+  detailCard.scrollIntoView({ behavior: "smooth" });
 }
 
 // --- FUNDOS ROTATIVOS E PARTÍCULAS ---
@@ -2033,12 +2894,58 @@ creatorAuthForm?.addEventListener("submit", handleCreatorLogin);
 createRpgForm?.addEventListener("submit", handleCreateRpg);
 creatorItemForm?.addEventListener("submit", handleCreatorItemSubmit);
 creatorLoreForm?.addEventListener("submit", handleCreatorLoreSubmit);
+document.querySelector("#creator-mural-form")?.addEventListener("submit", handleCreatorMuralSubmit);
+document.querySelector("#creator-dossiers-form")?.addEventListener("submit", handleCreatorDossierSubmit);
 
 document.querySelector("#item-form-clear")?.addEventListener("click", clearItemForm);
 document.querySelector("#lore-form-clear")?.addEventListener("click", clearLoreForm);
+document.querySelector("#mural-form-clear")?.addEventListener("click", clearMuralForm);
+document.querySelector("#dossiers-form-clear")?.addEventListener("click", clearDossierForm);
 document.querySelector("#refresh-inventories")?.addEventListener("click", loadCreatorInventories);
 document.querySelector("#inventory-search")?.addEventListener("input", loadCreatorInventories);
 document.querySelector("#refresh-logs")?.addEventListener("click", loadCreatorLogs);
+
+// Alternador de Sub-telas no Mural (Contratos vs Dossiês)
+document.querySelector("#open-dossiers-btn")?.addEventListener("click", () => {
+  const contractsView = document.querySelector("#mural-contracts-view");
+  const dossiersView = document.querySelector("#mural-dossiers-view");
+  const dossiersBtn = document.querySelector("#open-dossiers-btn");
+  
+  if (currentMuralSubView === "contracts") {
+    if (contractsView) contractsView.style.display = "none";
+    if (dossiersView) dossiersView.style.display = "block";
+    if (dossiersBtn) {
+      dossiersBtn.textContent = "📜 Contratos";
+      dossiersBtn.title = "Ver Contratos do Mural";
+    }
+    currentMuralSubView = "dossiers";
+    renderDossiers();
+  } else {
+    if (contractsView) contractsView.style.display = "block";
+    if (dossiersView) dossiersView.style.display = "none";
+    if (dossiersBtn) {
+      dossiersBtn.textContent = "👥 Dossiês";
+      dossiersBtn.title = "Ver Dossiês de Personagens";
+    }
+    currentMuralSubView = "contracts";
+    renderMural();
+  }
+});
+
+document.querySelector("#back-to-contracts-btn")?.addEventListener("click", () => {
+  const contractsView = document.querySelector("#mural-contracts-view");
+  const dossiersView = document.querySelector("#mural-dossiers-view");
+  const dossiersBtn = document.querySelector("#open-dossiers-btn");
+  
+  if (contractsView) contractsView.style.display = "block";
+  if (dossiersView) dossiersView.style.display = "none";
+  if (dossiersBtn) {
+    dossiersBtn.textContent = "👥 Dossiês";
+    dossiersBtn.title = "Ver Dossiês de Personagens";
+  }
+  currentMuralSubView = "contracts";
+  renderMural();
+});
 
 creatorTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -2291,17 +3198,23 @@ function updateActiveRoleButtons() {
   }
 }
 
-switchToPlayerBtn?.addEventListener("click", (event) => {
+switchToPlayerBtn?.addEventListener("click", async (event) => {
   event.stopPropagation();
   currentMemberRole = "player";
   updateRoleVisibility();
+  if (firebaseDb && currentRpgId) {
+    await Promise.all([loadLoreFromDb(), loadShopItemsFromDb()]);
+  }
   speakNpcLine("Seu selo foi alterado para Jogador.", { hideAfter: 3500 });
 });
 
-switchToCreatorBtn?.addEventListener("click", (event) => {
+switchToCreatorBtn?.addEventListener("click", async (event) => {
   event.stopPropagation();
   currentMemberRole = "creator";
   updateRoleVisibility();
+  if (firebaseDb && currentRpgId) {
+    await Promise.all([loadLoreFromDb(), loadShopItemsFromDb(), loadCreatorDashboardData()]);
+  }
   speakNpcLine("Seu selo foi alterado para Criador. A oficina do mestre está aberta.", { hideAfter: 3500 });
 });
 
@@ -2322,7 +3235,9 @@ function openCreatorPanel(panelId, loadFn) {
     "#inline-creator-shop",
     "#inline-creator-inventories",
     "#inline-creator-lore",
-    "#inline-creator-logs"
+    "#inline-creator-logs",
+    "#inline-creator-mural",
+    "#inline-creator-dossiers"
   ];
   
   const targetPanel = document.querySelector(panelId);
@@ -2362,6 +3277,16 @@ document.querySelector("#toggle-creator-lore")?.addEventListener("click", (event
   openCreatorPanel("#inline-creator-lore", loadCreatorLore);
 });
 
+document.querySelector("#toggle-creator-mural")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openCreatorPanel("#inline-creator-mural", loadCreatorMural);
+});
+
+document.querySelector("#toggle-creator-dossiers")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  openCreatorPanel("#inline-creator-dossiers", loadCreatorDossiers);
+});
+
 document.querySelector("#toggle-creator-logs")?.addEventListener("click", (event) => {
   event.stopPropagation();
   openCreatorPanel("#inline-creator-logs", loadCreatorLogs);
@@ -2389,6 +3314,20 @@ document.querySelector("#close-creator-lore-btn")?.addEventListener("click", (ev
   hideCreatorBackdrop();
 });
 
+document.querySelector("#close-creator-mural-btn")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const panel = document.querySelector("#inline-creator-mural");
+  if (panel) panel.hidden = true;
+  hideCreatorBackdrop();
+});
+
+document.querySelector("#close-creator-dossiers-btn")?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const panel = document.querySelector("#inline-creator-dossiers");
+  if (panel) panel.hidden = true;
+  hideCreatorBackdrop();
+});
+
 document.querySelector("#close-creator-logs-btn")?.addEventListener("click", (event) => {
   event.stopPropagation();
   const panel = document.querySelector("#inline-creator-logs");
@@ -2403,7 +3342,9 @@ document.querySelector("#creator-backdrop")?.addEventListener("click", (event) =
     "#inline-creator-shop",
     "#inline-creator-inventories",
     "#inline-creator-lore",
-    "#inline-creator-logs"
+    "#inline-creator-logs",
+    "#inline-creator-mural",
+    "#inline-creator-dossiers"
   ];
   panels.forEach(id => {
     const p = document.querySelector(id);
@@ -2412,6 +3353,20 @@ document.querySelector("#creator-backdrop")?.addEventListener("click", (event) =
   hideCreatorBackdrop();
 });
 
+
+// --- FILTRAGEM E CATEGORIAS DA LORE ---
+let activeLoreCategory = "Todos";
+
+function setupLoreFilters() {
+  const buttons = document.querySelectorAll("[data-lore-category]");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeLoreCategory = btn.getAttribute("data-lore-category");
+      buttons.forEach(b => b.classList.toggle("is-active", b === btn));
+      renderLore();
+    });
+  });
+}
 
 // --- INICIALIZAÇÃO GERAL DO JOGO ---
 
@@ -2426,3 +3381,90 @@ typeNpcLine(defaultNpcLine);
 renderShopItems();
 renderInventory();
 renderMural();
+setupLoreFilters();
+
+// --- LISTENERS DE ALTERNAÇÃO DE LOJA ---
+function setupShopSwitcher() {
+  const switchNormal = document.querySelector("#shop-switch-normal");
+  const switchMagic = document.querySelector("#shop-switch-magic");
+  const shopPanel = document.querySelector(".panel--shop");
+  const chatNpcNameElement = document.querySelector("#undertale-chat .chat-header strong");
+
+  if (!switchNormal || !switchMagic) return;
+
+  const handleShopSwitch = (type) => {
+    activeShop = type;
+    
+    // Toggle active classes on buttons
+    switchNormal.classList.toggle("is-active", type === "normal");
+    switchMagic.classList.toggle("is-active", type === "magic");
+    
+    // Toggle theme on panel
+    if (shopPanel) {
+      shopPanel.classList.toggle("theme-magic", type === "magic");
+    }
+
+    // Set active NPC name in chat header
+    if (chatNpcNameElement) {
+      chatNpcNameElement.textContent = type === "magic" ? "Genzo, o Eremita" : "Soiren Kisuke";
+    }
+
+    // Reset filters and active item selections
+    activeCategory = "Todos";
+    categoryButtons.forEach(b => {
+      const cat = b.getAttribute("data-category");
+      b.classList.toggle("is-active", cat === "Todos");
+    });
+    openShopItemId = "";
+    isHoveringItem = false;
+
+    // Reset dialogue indexes
+    defaultLineIndex = 0;
+    idleLineIndex = 0;
+    hoverLineIndex = 0;
+    introLineIndex = 0;
+    
+    // Close dialogue if active to prevent state mismatch
+    closeNpcConversation();
+
+    // Type the new vendor's default line
+    typeNpcLine(getNextDefaultLine());
+    
+    // Re-render items and update coins
+    renderShopItems();
+    updateCoinsUI();
+  };
+
+  switchNormal.addEventListener("click", () => handleShopSwitch("normal"));
+  switchMagic.addEventListener("click", () => handleShopSwitch("magic"));
+}
+
+setupShopSwitcher();
+
+// --- CONFIGURAÇÃO DE EVENTOS DE UPLOAD DO RETRATO (DOSSIÊS) ---
+function setupDossierFormListeners() {
+  const fileInput = document.querySelector("#dossier-avatar-file");
+  const urlInput = document.querySelector("#dossier-avatar");
+  const previewImg = document.querySelector("#dossier-avatar-preview");
+
+  fileInput?.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64String = event.target.result;
+      if (urlInput) urlInput.value = base64String;
+      if (previewImg) previewImg.src = base64String;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  urlInput?.addEventListener("input", () => {
+    if (previewImg) {
+      previewImg.src = urlInput.value || "assets/img/NPC1.png";
+    }
+  });
+}
+
+setupDossierFormListeners();
